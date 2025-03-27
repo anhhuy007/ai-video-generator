@@ -1,0 +1,47 @@
+'use client'
+
+import { useState } from 'react'
+import { SidebarProvider } from '@/components/ui/sidebar'
+import { DashboardSidebar } from '@/app/dashboard/components/sidebar'
+import { DashboardHeader } from '@/app/dashboard/components/header'
+import { VideoGenerator } from '@/app/dashboard/tabs/generate/generator'
+import { VideoGallery } from '@/app/dashboard/tabs/gallery/gallery'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { UsageStats } from '@/app/dashboard/tabs/usage/usage'
+
+export function DashboardPage() {
+  const [activeTab, setActiveTab] = useState('generate')
+
+  return (
+    <SidebarProvider defaultOpen={true}>
+      <div className='bg-background flex h-screen w-full overflow-hidden'>
+        <DashboardSidebar />
+        <div className='flex flex-1 flex-col overflow-hidden'>
+          <DashboardHeader />
+          <main className='flex-1 overflow-auto p-4 md:p-6'>
+            <Tabs
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className='w-full'
+            >
+              <TabsList className='mb-6 grid w-full max-w-md grid-cols-3'>
+                <TabsTrigger value='generate'>Generate</TabsTrigger>
+                <TabsTrigger value='gallery'>Gallery</TabsTrigger>
+                <TabsTrigger value='usage'>Usage</TabsTrigger>
+              </TabsList>
+              <TabsContent value='generate' className='space-y-6'>
+                <VideoGenerator />
+              </TabsContent>
+              <TabsContent value='gallery' className='space-y-6'>
+                <VideoGallery />
+              </TabsContent>
+              <TabsContent value='usage' className='space-y-6'>
+                <UsageStats />
+              </TabsContent>
+            </Tabs>
+          </main>
+        </div>
+      </div>
+    </SidebarProvider>
+  )
+}
