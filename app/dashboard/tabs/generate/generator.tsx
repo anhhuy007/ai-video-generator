@@ -1,150 +1,96 @@
-'use client'
-
-import { useState } from 'react'
+import type React from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle
 } from '@/components/ui/card'
-import { Textarea } from '@/components/ui/textarea'
-import { Slider } from '@/components/ui/slider'
-import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select'
-import { Wand2, Loader2, Clock, Video } from 'lucide-react'
-import { Progress } from '@/components/ui/progress'
+import Link from 'next/link'
+import { ArrowRight, Film, Mic, Pencil, PlayCircle, Upload } from 'lucide-react'
 
 export function VideoGenerator() {
-  const [prompt, setPrompt] = useState('')
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [progress, setProgress] = useState(0)
-  const [duration, setDuration] = useState([15])
-  const [resolution, setResolution] = useState('1080p')
-
-  const handleGenerate = () => {
-    if (!prompt) return
-
-    setIsGenerating(true)
-    setProgress(0)
-
-    // Simulate progress
-    const interval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval)
-          setIsGenerating(false)
-          return 100
-        }
-        return prev + 5
-      })
-    }, 500)
-  }
-
   return (
-    <Card className='w-full'>
-      <CardHeader>
-        <CardTitle className='flex items-center gap-2'>
-          <Video className='text-primary h-5 w-5' />
-          Generate Video
-        </CardTitle>
-        <CardDescription>
-          Describe the video you want to create in detail. Be specific about
-          scenes, actions, and style.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className='space-y-6'>
-        <div className='space-y-2'>
-          <Label htmlFor='prompt'>Prompt</Label>
-          <Textarea
-            id='prompt'
-            placeholder='A cinematic shot of a person walking through a futuristic city with neon lights and flying cars...'
-            className='min-h-32 resize-none'
-            value={prompt}
-            onChange={e => setPrompt(e.target.value)}
-            disabled={isGenerating}
+    <Card>
+      <div className='container mx-auto px-4 py-12'>
+        <div className='mb-12 text-center'>
+          <h1 className='mb-4 text-4xl font-bold tracking-tight'>
+            AI Video Generator Pipeline
+          </h1>
+          <p className='mx-auto max-w-2xl text-xl text-muted-foreground'>
+            Create stunning AI-generated videos with our comprehensive pipeline.
+            From script to publishing, we've got you covered.
+          </p>
+          <div className='mt-8'>
+            <Button asChild size='lg'>
+              <Link href='/create'>
+                Start Creating <ArrowRight className='ml-2 h-4 w-4' />
+              </Link>
+            </Button>
+          </div>
+        </div>
+
+        <div className='mt-12 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3'>
+          <FeatureCard
+            icon={<Pencil className='h-8 w-8' />}
+            title='Literary Content Creation'
+            description='Generate scripts with AI assistance. Choose content styles and edit before proceeding.'
           />
-        </div>
-
-        <div className='grid grid-cols-1 gap-6 md:grid-cols-2'>
-          <div className='space-y-2'>
-            <div className='flex items-center justify-between'>
-              <Label htmlFor='duration'>Duration (seconds)</Label>
-              <span className='text-muted-foreground text-sm'>
-                {duration[0]}s
-              </span>
+          <FeatureCard
+            icon={<Mic className='h-8 w-8' />}
+            title='Voice Configuration'
+            description='Select from multiple AI voice providers. Adjust speed, tone, and preview before applying.'
+          />
+          <FeatureCard
+            icon={<Film className='h-8 w-8' />}
+            title='AI Image & Video Generation'
+            description='Generate and customize images. Create videos with motion effects and transitions.'
+          />
+          <FeatureCard
+            icon={<PlayCircle className='h-8 w-8' />}
+            title='Advanced Video Editing'
+            description='Drag and drop interface for timeline editing. Add animations, music, and subtitles.'
+          />
+          <FeatureCard
+            icon={<Upload className='h-8 w-8' />}
+            title='Publishing & Management'
+            description='Choose resolution and publish to multiple platforms. Manage your video library.'
+          />
+          <Card className='flex items-center justify-center border-2 border-dashed p-6'>
+            <div className='text-center'>
+              <h3 className='mb-2 text-lg font-medium'>
+                Ready to get started?
+              </h3>
+              <Button asChild>
+                <Link href='/generate'>Create New Video</Link>
+              </Button>
             </div>
-            <Slider
-              id='duration'
-              min={5}
-              max={60}
-              step={5}
-              value={duration}
-              onValueChange={setDuration}
-              disabled={isGenerating}
-            />
-          </div>
-
-          <div className='space-y-2'>
-            <Label htmlFor='resolution'>Resolution</Label>
-            <Select
-              value={resolution}
-              onValueChange={setResolution}
-              disabled={isGenerating}
-            >
-              <SelectTrigger id='resolution'>
-                <SelectValue placeholder='Select resolution' />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='720p'>720p</SelectItem>
-                <SelectItem value='1080p'>1080p</SelectItem>
-                <SelectItem value='4k'>4K</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          </Card>
         </div>
+      </div>
+    </Card>
+  )
+}
 
-        {isGenerating && (
-          <div className='space-y-2'>
-            <div className='flex items-center justify-between'>
-              <span className='text-sm font-medium'>Generating video...</span>
-              <span className='text-muted-foreground text-sm'>{progress}%</span>
-            </div>
-            <Progress value={progress} className='h-2' />
-          </div>
-        )}
+function FeatureCard({
+  icon,
+  title,
+  description
+}: {
+  icon: React.ReactNode
+  title: string
+  description: string
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <div className='mb-2 text-primary'>{icon}</div>
+        <CardTitle>{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <CardDescription className='text-sm'>{description}</CardDescription>
       </CardContent>
-      <CardFooter className='flex items-center justify-between'>
-        <div className='text-muted-foreground flex items-center gap-1 text-sm'>
-          <Clock className='h-4 w-4' />
-          <span>Estimated time: {Math.ceil(duration[0] / 5)} minutes</span>
-        </div>
-        <Button
-          onClick={handleGenerate}
-          disabled={!prompt || isGenerating}
-          className='gap-2'
-        >
-          {isGenerating ? (
-            <>
-              <Loader2 className='h-4 w-4 animate-spin' />
-              Generating
-            </>
-          ) : (
-            <>
-              <Wand2 className='h-4 w-4' />
-              Generate Video
-            </>
-          )}
-        </Button>
-      </CardFooter>
     </Card>
   )
 }

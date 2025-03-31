@@ -14,7 +14,7 @@ export function DashboardPage() {
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className='bg-background flex h-screen w-full overflow-hidden'>
+      <div className='flex h-screen w-full overflow-hidden bg-background'>
         <DashboardSidebar />
         <div className='flex flex-1 flex-col overflow-hidden'>
           <DashboardHeader />

@@ -95,7 +95,7 @@ export function VideoGallery() {
           {filteredVideos.map(video => (
             <div
               key={video.id}
-              className='bg-card group relative overflow-hidden rounded-lg border'
+              className='group relative overflow-hidden rounded-lg border bg-card'
             >
               <div className='relative aspect-video overflow-hidden'>
                 <img
@@ -120,7 +120,7 @@ export function VideoGallery() {
                 <div className='flex items-start justify-between'>
                   <div>
                     <h3 className='font-medium'>{video.title}</h3>
-                    <p className='text-muted-foreground text-xs'>
+                    <p className='text-xs text-muted-foreground'>
                       {video.date}
                     </p>
                   </div>
