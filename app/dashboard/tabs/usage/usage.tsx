@@ -145,7 +145,7 @@ export function UsageStats() {
           <div className='space-y-4'>
             <div className='flex items-center justify-between'>
               <span className='text-sm font-medium'>Current Plan</span>
-              <span className='text-primary font-semibold'>Pro</span>
+              <span className='font-semibold text-primary'>Pro</span>
             </div>
             <div className='flex items-center justify-between'>
               <span className='text-sm font-medium'>Billing Cycle</span>
@@ -160,13 +160,13 @@ export function UsageStats() {
                 <span className='text-sm font-medium'>Minutes Used</span>
                 <span>42.5 / 100</span>
               </div>
-              <div className='bg-secondary h-2 w-full rounded-full'>
+              <div className='h-2 w-full rounded-full bg-secondary'>
                 <div
-                  className='bg-primary h-2 rounded-full'
+                  className='h-2 rounded-full bg-primary'
                   style={{ width: '42.5%' }}
                 ></div>
               </div>
-              <p className='text-muted-foreground text-xs'>
+              <p className='text-xs text-muted-foreground'>
                 42.5% of your monthly allowance used
               </p>
             </div>

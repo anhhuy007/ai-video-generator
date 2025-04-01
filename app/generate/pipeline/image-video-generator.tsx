@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -47,6 +47,13 @@ export default function ImageVideoGenerator({
   const [isCreatingVideo, setIsCreatingVideo] = useState(false)
   const [videoCreated, setVideoCreated] = useState(false)
 
+  // Update completion status when video is created
+  useEffect(() => {
+    if (videoCreated) {
+      onComplete()
+    }
+  }, [videoCreated, onComplete])
+
   const handleGenerateImages = () => {
     setIsGenerating(true)
 
@@ -81,10 +88,6 @@ export default function ImageVideoGenerator({
       setIsCreatingVideo(false)
       setVideoCreated(true)
     }, 4000)
-  }
-
-  const handleComplete = () => {
-    onComplete()
   }
 
   return (
@@ -345,9 +348,7 @@ export default function ImageVideoGenerator({
                     <RefreshCw className='mr-2 h-4 w-4' />
                     Recreate
                   </Button>
-                  <Button onClick={handleComplete}>
-                    Continue to Video Editor
-                  </Button>
+                  <Button onClick={() => {}}>Continue to Video Editor</Button>
                 </div>
               </div>
             )}
