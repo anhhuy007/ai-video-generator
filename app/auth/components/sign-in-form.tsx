@@ -1,5 +1,6 @@
 'use client'
 
+import { signIn } from 'next-auth/react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -8,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
-import { Github, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 
 const signInSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address' }),
@@ -44,14 +45,9 @@ export default function SignInForm({
 
   async function onSubmit(data: SignInFormValues) {
     setIsLoading(true)
-
     try {
-      // Here you would implement your authentication logic
       console.log('Sign in data:', data)
-
-      // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000))
-
       onSuccess()
     } catch (error) {
       console.error('Sign in error:', error)
@@ -129,9 +125,12 @@ export default function SignInForm({
       </div>
 
       <div className='grid grid-cols-1 gap-2'>
-        <Button variant='outline' className='border-slate-200 bg-white'>
-          <Github className='mr-2 h-4 w-4' />
-          GitHub
+        <Button
+          variant='outline'
+          className='border-slate-200 bg-white'
+          onClick={() => signIn('google')}
+        >
+          Google
         </Button>
       </div>
 
