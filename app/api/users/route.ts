@@ -6,6 +6,7 @@ import {
   getUserByGoogleId
 } from '@/app/service/service'
 
+// Tạo mới người dùng
 export async function POST(req: Request) {
   try {
     const { googleId, email, name, avatarUrl } = await req.json()
@@ -26,6 +27,7 @@ export async function POST(req: Request) {
   }
 }
 
+// Cập nhật thông tin người dùng
 export async function PATCH(req: Request) {
   try {
     const { userId, email, name, avatarUrl } = await req.json()
@@ -43,6 +45,7 @@ export async function PATCH(req: Request) {
   }
 }
 
+// Xóa người dùng
 export async function DELETE(req: Request) {
   try {
     const { userId } = await req.json()
@@ -60,6 +63,7 @@ export async function DELETE(req: Request) {
   }
 }
 
+// Lấy thông tin người dùng qua googleId
 export async function GET(req: Request) {
   try {
     const { googleId } = await req.json()

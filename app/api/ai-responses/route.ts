@@ -4,6 +4,7 @@ import {
   getAIResponseForUserRequest
 } from '@/app/service/service'
 
+// Tạo mới phản hồi AI
 export async function POST(req: Request) {
   try {
     const { userRequestId, videoUrl } = await req.json()
@@ -24,6 +25,7 @@ export async function POST(req: Request) {
   }
 }
 
+// Lấy phản hồi AI cho yêu cầu người dùng
 export async function GET(req: Request) {
   try {
     const { userRequestId } = await req.json()

@@ -5,6 +5,7 @@ import {
   deleteConversation
 } from '@/app/service/service'
 
+// Tạo mới cuộc trò chuyện
 export async function POST(req: Request) {
   try {
     const { userId } = await req.json()
@@ -22,6 +23,7 @@ export async function POST(req: Request) {
   }
 }
 
+// Lấy danh sách cuộc trò chuyện của người dùng
 export async function GET(req: Request) {
   try {
     const { userId } = await req.json()
@@ -39,6 +41,7 @@ export async function GET(req: Request) {
   }
 }
 
+// Xóa cuộc trò chuyện
 export async function DELETE(req: Request) {
   try {
     const { conversationId } = await req.json()

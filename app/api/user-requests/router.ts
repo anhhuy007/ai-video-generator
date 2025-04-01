@@ -4,6 +4,7 @@ import {
   getUserRequestsForConversation
 } from '@/app/service/service'
 
+// Tạo mới yêu cầu người dùng
 export async function POST(req: Request) {
   try {
     const { conversationId, requestText } = await req.json()
@@ -24,6 +25,7 @@ export async function POST(req: Request) {
   }
 }
 
+// Lấy danh sách yêu cầu người dùng trong cuộc trò chuyện
 export async function GET(req: Request) {
   try {
     const { conversationId } = await req.json()
