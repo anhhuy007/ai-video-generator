@@ -219,7 +219,7 @@ export default function LiteraryCreator({
                   <Label htmlFor='topic'>Enter your topic</Label>
                   <Input
                     id='topic'
-                    placeholder='Enter a literary topic'
+                    placeholder='Enter a  literary topic'
                     value={topic}
                     onChange={e => {
                       setTopic(e.target.value)
@@ -285,7 +285,7 @@ export default function LiteraryCreator({
 
                 <Button
                   onClick={handleGenerateScript}
-                  disabled={!topicSelected || !styleSelected || isGenerating}
+                  disabled={!topicSelected || isGenerating}
                   className='w-full'
                 >
                   {isGenerating ? (

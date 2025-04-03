@@ -6,7 +6,6 @@ import {
   getUserByGoogleId
 } from '@/app/service/service'
 
-// Tạo mới người dùng
 export async function POST(req: Request) {
   try {
     const { googleId, email, name, avatarUrl } = await req.json()

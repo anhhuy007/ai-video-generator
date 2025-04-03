@@ -21,7 +21,7 @@ export async function createUser(
     SET email = EXCLUDED.email, name = EXCLUDED.name, avatar_url = EXCLUDED.avatar_url
     RETURNING *;
   `
-  return result[0] 
+  return result[0]
 }
 
 export async function createConversation(userId: string) {
@@ -39,9 +39,8 @@ export async function getConversationsForUser(userId: string) {
     WHERE user_id = ${userId}
     ORDER BY started_at DESC;
   `
-  return result 
+  return result
 }
-
 
 export async function createUserRequest(
   conversationId: string,
@@ -52,9 +51,8 @@ export async function createUserRequest(
     VALUES (${conversationId}, ${requestText})
     RETURNING *;
   `
-  return result[0] 
+  return result[0]
 }
-
 
 export async function getUserRequestsForConversation(conversationId: string) {
   const result = await sql`
@@ -62,7 +60,7 @@ export async function getUserRequestsForConversation(conversationId: string) {
     WHERE conversation_id = ${conversationId}
     ORDER BY created_at ASC;
   `
-  return result 
+  return result
 }
 
 export async function createAIResponse(
@@ -74,7 +72,7 @@ export async function createAIResponse(
     VALUES (${userRequestId}, ${videoUrl})
     RETURNING *;
   `
-  return result[0] 
+  return result[0]
 }
 
 export async function getAIResponseForUserRequest(userRequestId: string) {
@@ -84,7 +82,7 @@ export async function getAIResponseForUserRequest(userRequestId: string) {
     ORDER BY created_at DESC
     LIMIT 1;
   `
-  return result[0] 
+  return result[0]
 }
 
 export async function updateUser(
@@ -103,7 +101,7 @@ export async function updateUser(
     WHERE id = ${userId}
     RETURNING *;
   `
-  return result[0] 
+  return result[0]
 }
 
 export async function deleteConversation(conversationId: string) {
@@ -121,7 +119,7 @@ export async function deleteUser(userId: string) {
     WHERE id = ${userId}
     RETURNING *;
   `
-  return result[0] 
+  return result[0]
 }
 
 export async function getUserByGoogleId(googleId: string) {
@@ -129,7 +127,7 @@ export async function getUserByGoogleId(googleId: string) {
     SELECT * FROM users
     WHERE google_id = ${googleId};
   `
-  return result[0] 
+  return result[0]
 }
 
 export async function getMessagesForConversation(conversationId: string) {
@@ -155,9 +153,5 @@ export async function getMessagesForConversation(conversationId: string) {
     })
   )
 
-  return messages 
+  return messages
 }
-
-
-
-
