@@ -38,6 +38,14 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.sub!
       }
       return session
+    },
+    async redirect({ url, baseUrl }: { url: string; baseUrl: string }) {
+      // Redirect to the dashboard after login
+      if (url === '/api/auth/callback/google') {
+        console.log('Redirecting to dashboard')
+        return `${baseUrl}/dashboard`
+      }
+      return url
     }
   },
   secret: process.env.NEXTAUTH_SECRET,
