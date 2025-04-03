@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, use } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
@@ -42,22 +42,31 @@ export default function VoiceConfiguration({
   const [activeTab, setActiveTab] = useState('provider')
   const [isConfigurationComplete, setIsConfigurationComplete] = useState(false)
 
+  // Track if voice has been previewed
+  const [voicePreviewed, setVoicePreviewed] = useState(false)
+
   const selectedProvider = VOICE_PROVIDERS.find(p => p.id === provider)
+
+  // Update completion status when configuration is complete
+  useEffect(() => {
+    if (isConfigurationComplete) {
+      onComplete()
+    }
+  }, [isConfigurationComplete, onComplete])
 
   const handlePreviewVoice = () => {
     setIsPlaying(true)
     // Simulate audio playback
     setTimeout(() => {
       setIsPlaying(false)
+      setVoicePreviewed(true)
     }, 3000)
   }
 
   const handleComplete = () => {
     setIsConfigurationComplete(true)
-    setTimeout(() => {
-      onComplete()
-    }, 1000)
   }
+
 
   return (
     <div>

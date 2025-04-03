@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
@@ -21,15 +21,19 @@ export default function VideoEditor({
   const [isPreviewReady, setIsPreviewReady] = useState(false)
   const [isEditorComplete, setIsEditorComplete] = useState(false)
 
+  // Update completion status when editor is complete
+  useEffect(() => {
+    if (isEditorComplete) {
+      onComplete()
+    }
+  }, [isEditorComplete, onComplete])
+
   const handlePreview = () => {
     setIsPreviewReady(true)
   }
 
   const handleComplete = () => {
     setIsEditorComplete(true)
-    setTimeout(() => {
-      onComplete()
-    }, 1000)
   }
 
   return (

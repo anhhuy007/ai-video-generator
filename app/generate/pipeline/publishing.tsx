@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
@@ -57,7 +57,7 @@ const PLATFORMS = [
   }
 ]
 
-export default function Publishing() {
+export default function Publishing({ onComplete }: { onComplete: () => void }) {
   const [activeTab, setActiveTab] = useState('metadata')
   const [title, setTitle] = useState(
     'AI Generated Video - The Evolution of Artificial Intelligence'
@@ -72,6 +72,13 @@ export default function Publishing() {
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([])
   const [isPublishing, setIsPublishing] = useState(false)
   const [isPublished, setIsPublished] = useState(false)
+
+  // Update completion status when publishing is complete
+  useEffect(() => {
+    if (isPublished) {
+      onComplete()
+    }
+  }, [isPublished, onComplete])
 
   const togglePlatform = (platformId: string) => {
     if (selectedPlatforms.includes(platformId)) {

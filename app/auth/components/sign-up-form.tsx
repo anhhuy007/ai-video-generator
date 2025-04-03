@@ -56,11 +56,10 @@ export default function SignUpForm({
   async function onSubmit(data: SignUpFormValues) {
     setIsLoading(true)
 
+    console.log('Sign up data:', data)
     try {
-      // Here you would implement your registration logic
       console.log('Sign up data:', data)
 
-      // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000))
 
       onSuccess()

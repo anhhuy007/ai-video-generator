@@ -23,6 +23,13 @@ export default function GeneratePage() {
   const [activeStep, setActiveStep] = useState('literary')
   const [completedSteps, setCompletedSteps] = useState<string[]>([])
 
+  // Track completion status for each step
+  const [literaryComplete, setLiteraryComplete] = useState(false)
+  const [voiceComplete, setVoiceComplete] = useState(false)
+  const [imagesComplete, setImagesComplete] = useState(false)
+  const [editorComplete, setEditorComplete] = useState(false)
+  const [publishComplete, setPublishComplete] = useState(false)
+
   const currentStepIndex = steps.findIndex(step => step.id === activeStep)
 
   const handleNext = () => {
@@ -39,6 +46,24 @@ export default function GeneratePage() {
   const handlePrevious = () => {
     if (currentStepIndex > 0) {
       setActiveStep(steps[currentStepIndex - 1].id)
+    }
+  }
+
+  // Check if the current step is complete
+  const isCurrentStepComplete = () => {
+    switch (activeStep) {
+      case 'literary':
+        return literaryComplete
+      case 'voice':
+        return voiceComplete
+      case 'images':
+        return imagesComplete
+      case 'editor':
+        return editorComplete
+      case 'publish':
+        return publishComplete
+      default:
+        return false
     }
   }
 
@@ -83,19 +108,19 @@ export default function GeneratePage() {
       <Card className='p-6'>
         <Tabs value={activeStep} className='w-full'>
           <TabsContent value='literary'>
-            <LiteraryCreator onComplete={handleNext} />
+            <LiteraryCreator onComplete={() => setLiteraryComplete(true)} />
           </TabsContent>
           <TabsContent value='voice'>
-            <VoiceConfiguration onComplete={handleNext} />
+            <VoiceConfiguration onComplete={() => setVoiceComplete(true)} />
           </TabsContent>
           <TabsContent value='images'>
-            <ImageVideoGenerator onComplete={handleNext} />
+            <ImageVideoGenerator onComplete={() => setImagesComplete(true)} />
           </TabsContent>
           <TabsContent value='editor'>
-            <VideoEditor onComplete={handleNext} />
+            <VideoEditor onComplete={() => setEditorComplete(true)} />
           </TabsContent>
           <TabsContent value='publish'>
-            <Publishing />
+            <Publishing onComplete={() => setPublishComplete(true)} />
           </TabsContent>
         </Tabs>
 
@@ -109,11 +134,11 @@ export default function GeneratePage() {
           </Button>
 
           {activeStep !== 'publish' ? (
-            <Button onClick={handleNext}>
+            <Button onClick={handleNext} disabled={!isCurrentStepComplete()}>
               Next <ArrowRight className='ml-2 h-4 w-4' />
             </Button>
           ) : (
-            <Button>Finish</Button>
+            <Button disabled={!publishComplete}>Finish</Button>
           )}
         </div>
       </Card>
