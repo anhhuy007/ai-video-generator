@@ -4,7 +4,7 @@ import {
   updateUser,
   deleteUser,
   getUserByGoogleId
-} from '@/app/service/service'
+} from '@/app/service/user.service'
 
 export async function POST(req: Request) {
   try {
