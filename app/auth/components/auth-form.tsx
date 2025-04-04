@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import SignInForm from './sign-in-form'
-import SignUpForm from './sign-up-form'
 
 export default function AuthForm() {
   const [activeTab, setActiveTab] = useState<string>('signin')
@@ -25,13 +24,6 @@ export default function AuthForm() {
           <SignInForm
             onSuccess={() => {}}
             onSignUpClick={() => setActiveTab('signup')}
-          />
-        </TabsContent>
-
-        <TabsContent value='signup'>
-          <SignUpForm
-            onSuccess={() => {}}
-            onSignInClick={() => setActiveTab('signin')}
           />
         </TabsContent>
       </Tabs>

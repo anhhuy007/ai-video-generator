@@ -46,7 +46,6 @@ export default function SignInForm({
   async function onSubmit(data: SignInFormValues) {
     setIsLoading(true)
     try {
-      console.log('Sign in data:', data)
       await new Promise(resolve => setTimeout(resolve, 1000))
       onSuccess()
     } catch (error) {

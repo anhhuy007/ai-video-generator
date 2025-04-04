@@ -8,12 +8,14 @@ if (!process.env.DATABASE_URL) {
 }
 const sql = neon(process.env.DATABASE_URL)
 
-export async function createUser(
+export async function createGoogleUser(
   googleId: string,
   email: string,
   name?: string,
   avatarUrl?: string
 ) {
+  // create a new user or update existing user
+  // using the googleId as the unique identifier
   const result = await sql`
     INSERT INTO users (google_id, email, name, avatar_url)
     VALUES (${googleId}, ${email}, ${name ?? null}, ${avatarUrl ?? null})

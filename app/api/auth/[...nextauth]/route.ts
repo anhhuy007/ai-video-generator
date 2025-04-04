@@ -20,7 +20,6 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async signIn({ user }: { user: User }) {
-      // Send user data to your API to store in the database
       await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/signin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -31,6 +30,7 @@ export const authOptions: NextAuthOptions = {
           avatarUrl: user.image
         })
       })
+      
       return true
     },
     async session({ session, token }: { session: Session; token: JWT }) {
@@ -39,14 +39,17 @@ export const authOptions: NextAuthOptions = {
       }
       return session
     },
+    async jwt({ token, user }: { token: JWT; user: User }) {
+      if (user) { 
+          
+          token.sub = user.id
+        }
+      return token
+    },
     async redirect({ url, baseUrl }: { url: string; baseUrl: string }) {
-      // Redirect to the dashboard after login
-      if (url === '/api/auth/callback/google') {
-        console.log('Redirecting to dashboard')
-        return `${baseUrl}/dashboard`
-      }
-      return url
+      return baseUrl
     }
+
   },
   secret: process.env.NEXTAUTH_SECRET,
   pages: {
