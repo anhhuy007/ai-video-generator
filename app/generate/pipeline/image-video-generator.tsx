@@ -2,11 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Slider } from '@/components/ui/slider'
 import {
   Check,
   ImageIcon,
@@ -25,21 +22,47 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle
+} from '@/components/ui/dialog'
+import { Slider } from '@/components/ui/slider'
 
+// Updated image styles with visual representations
 const IMAGE_STYLES = [
-  { id: 'sketch', name: 'Sketch' },
-  { id: 'classic', name: 'Classic' },
-  { id: 'modern', name: 'Modern' },
-  { id: 'abstract', name: 'Abstract' },
-  { id: 'realistic', name: 'Realistic' },
-  { id: 'cartoon', name: 'Cartoon' }
-]
-
-const ASPECT_RATIOS = [
-  { id: '1:1', name: 'Square (1:1)' },
-  { id: '4:3', name: 'Standard (4:3)' },
-  { id: '16:9', name: 'Widescreen (16:9)' },
-  { id: '9:16', name: 'Vertical (9:16)' }
+  {
+    id: 'sketch',
+    name: 'Sketch',
+    image: '/samples/sketch.jpg?height=100&width=200&text=Sketch+Style'
+  },
+  {
+    id: 'classic',
+    name: 'Classic',
+    image: '/samples/classic.jpg?height=100&width=200&text=Classic+Style'
+  },
+  {
+    id: 'modern',
+    name: 'Modern',
+    image: '/samples/modern.jpg?height=100&width=200&text=Modern+Style'
+  },
+  {
+    id: 'abstract',
+    name: 'Abstract',
+    image: '/samples/abstract.jpg?height=100&width=200&text=Abstract+Style'
+  },
+  {
+    id: 'realistic',
+    name: 'Realistic',
+    image: '/samples/realistic.jpg?height=100&width=200&text=Realistic+Style'
+  },
+  {
+    id: 'cartoon',
+    name: 'Cartoon',
+    image: '/samples/cartoon.jpg?height=100&width=200&text=Cartoon+Style'
+  }
 ]
 
 // Mock script screens from the Literary Creator
@@ -85,8 +108,6 @@ export default function ImageVideoGenerator({
 }) {
   const [activeTab, setActiveTab] = useState('generate')
   const [imageStyle, setImageStyle] = useState('classic')
-  const [aspectRatio, setAspectRatio] = useState('16:9')
-  const [colorIntensity, setColorIntensity] = useState([7])
   const [isGenerating, setIsGenerating] = useState(false)
   const [isRegenerating, setIsRegenerating] = useState<number | null>(null)
   const [motionEffect, setMotionEffect] = useState('pan')
@@ -102,6 +123,10 @@ export default function ImageVideoGenerator({
   const [currentEditingScreen, setCurrentEditingScreen] = useState<
     number | null
   >(null)
+
+  // Dialog state for viewing full image
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [dialogScreen, setDialogScreen] = useState<number | null>(null)
 
   // Image editing states
   const [imageScale, setImageScale] = useState([100])
@@ -133,11 +158,13 @@ export default function ImageVideoGenerator({
 
       scriptScreens.forEach(screen => {
         newImages[screen.id] =
-          `/placeholder.jpg?height=400&width=${aspectRatio === '1:1' ? 400 : aspectRatio === '9:16' ? 225 : 711}&text=${encodeURIComponent(screen.title)}`
+          `/placeholder.jpg?height=400&width=700&text=${encodeURIComponent(screen.title)}`
       })
 
       setScreenImages(newImages)
       setIsGenerating(false)
+      // Automatically move to customize tab after generation
+      setActiveTab('customize')
     }, 3000)
   }
 
@@ -148,7 +175,7 @@ export default function ImageVideoGenerator({
     setTimeout(() => {
       setScreenImages(prev => ({
         ...prev,
-        [screenId]: `/placeholder.jpg?height=400&width=${aspectRatio === '1:1' ? 400 : aspectRatio === '9:16' ? 225 : 711}&text=${encodeURIComponent(scriptScreens.find(s => s.id === screenId)?.title || '')}&v=${Math.random()}`
+        [screenId]: `/placeholder.jpg?height=400&width=700&text=${encodeURIComponent(scriptScreens.find(s => s.id === screenId)?.title || '')}&v=${Math.random()}`
       }))
       setIsRegenerating(null)
     }, 2000)
@@ -156,6 +183,12 @@ export default function ImageVideoGenerator({
 
   const handleSelectScreen = (screenId: number) => {
     setSelectedScreen(screenId === selectedScreen ? null : screenId)
+  }
+
+  // Function to open dialog with screen details
+  const handleOpenDialog = (screenId: number) => {
+    setDialogScreen(screenId)
+    setDialogOpen(true)
   }
 
   // Update the handleEditImage function to also set the script text
@@ -189,7 +222,7 @@ export default function ImageVideoGenerator({
     setTimeout(() => {
       setScreenImages(prev => ({
         ...prev,
-        [currentEditingScreen]: `/placeholder.jpg?height=400&width=${aspectRatio === '1:1' ? 400 : aspectRatio === '9:16' ? 225 : 711}&text=${encodeURIComponent(editingScriptText.substring(0, 20))}&v=${Math.random()}`
+        [currentEditingScreen]: `/placeholder.jpg?height=400&width=700&text=${encodeURIComponent(editingScriptText.substring(0, 20))}&v=${Math.random()}`
       }))
       setIsRegenerating(null)
     }, 2000)
@@ -249,60 +282,29 @@ export default function ImageVideoGenerator({
         <TabsContent value='generate'>
           <div className='space-y-6'>
             <div>
-              <Label>Image Style</Label>
-              <RadioGroup
-                value={imageStyle}
-                onValueChange={setImageStyle}
-                className='mt-2 grid grid-cols-2 gap-3 md:grid-cols-3'
-              >
+              <Label className='mb-3 block'>Select Image Style</Label>
+              <div className='grid grid-cols-2 gap-10 md:grid-cols-3'>
                 {IMAGE_STYLES.map(style => (
                   <div
                     key={style.id}
-                    className='flex items-center space-x-2 rounded-md border p-3'
+                    className={`cursor-pointer overflow-hidden rounded-md border transition-all hover:shadow-md ${
+                      imageStyle === style.id ? 'ring-2 ring-primary' : ''
+                    }`}
+                    onClick={() => setImageStyle(style.id)}
                   >
-                    <RadioGroupItem value={style.id} id={style.id} />
-                    <Label htmlFor={style.id}>{style.name}</Label>
+                    <img
+                      src={style.image || '/placeholder.jpg'}
+                      alt={`${style.name} style example`}
+                      className='h-auto w-full border'
+                    />
+                    <div className='flex items-center justify-between p-2'>
+                      <span className='mx-auto font-medium'>{style.name}</span>
+                      {imageStyle === style.id && (
+                        <Check className='h-4 w-4 text-primary' />
+                      )}
+                    </div>
                   </div>
                 ))}
-              </RadioGroup>
-            </div>
-
-            <div>
-              <Label>Aspect Ratio</Label>
-              <RadioGroup
-                value={aspectRatio}
-                onValueChange={setAspectRatio}
-                className='mt-2 grid grid-cols-2 gap-3 md:grid-cols-4'
-              >
-                {ASPECT_RATIOS.map(ratio => (
-                  <div
-                    key={ratio.id}
-                    className='flex items-center space-x-2 rounded-md border p-3'
-                  >
-                    <RadioGroupItem value={ratio.id} id={ratio.id} />
-                    <Label htmlFor={ratio.id}>{ratio.name}</Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
-
-            <div>
-              <div className='mb-2 flex justify-between'>
-                <Label>Color Intensity</Label>
-                <span className='text-sm text-muted-foreground'>
-                  {colorIntensity[0]}/10
-                </span>
-              </div>
-              <Slider
-                value={colorIntensity}
-                onValueChange={setColorIntensity}
-                min={1}
-                max={10}
-                step={1}
-              />
-              <div className='mt-1 flex justify-between text-xs text-muted-foreground'>
-                <span>Muted</span>
-                <span>Vibrant</span>
               </div>
             </div>
 
@@ -320,99 +322,6 @@ export default function ImageVideoGenerator({
                 'Generate Images for All Screens'
               )}
             </Button>
-
-            {Object.keys(screenImages).length > 0 && (
-              <div>
-                <div className='mb-4 flex items-center justify-between'>
-                  <Label>Generated Images for Script Screens</Label>
-                  <Button
-                    variant='outline'
-                    size='sm'
-                    onClick={() => setActiveTab('customize')}
-                  >
-                    Customize Images
-                  </Button>
-                </div>
-
-                <div className='space-y-4'>
-                  {scriptScreens.map(screen => (
-                    <Card key={screen.id} className='overflow-hidden'>
-                      <div className='flex items-center justify-between bg-muted/30 p-4'>
-                        <h3 className='font-medium'>{screen.title}</h3>
-                        {screenImages[screen.id] && (
-                          <Button
-                            variant='ghost'
-                            size='sm'
-                            onClick={() => handleRegenerateImage(screen.id)}
-                            disabled={isRegenerating === screen.id}
-                          >
-                            {isRegenerating === screen.id ? (
-                              <Loader2 className='h-4 w-4 animate-spin' />
-                            ) : (
-                              <RefreshCw className='h-4 w-4' />
-                            )}
-                          </Button>
-                        )}
-                      </div>
-                      <CardContent className='p-0'>
-                        {screenImages[screen.id] ? (
-                          <div className='relative'>
-                            <img
-                              src={
-                                screenImages[screen.id] || '/placeholder.jpg'
-                              }
-                              alt={`Image for ${screen.title}`}
-                              className='h-auto w-full'
-                            />
-                            <div className='absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity hover:opacity-100'>
-                              <Button
-                                variant='secondary'
-                                size='sm'
-                                className='mr-2'
-                                onClick={() => handleRegenerateImage(screen.id)}
-                                disabled={isRegenerating === screen.id}
-                              >
-                                {isRegenerating === screen.id ? (
-                                  <Loader2 className='mr-1 h-4 w-4 animate-spin' />
-                                ) : (
-                                  <RefreshCw className='mr-1 h-4 w-4' />
-                                )}
-                                Regenerate
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className='flex h-48 items-center justify-center bg-muted'>
-                            <Button
-                              variant='outline'
-                              onClick={() => handleRegenerateImage(screen.id)}
-                              disabled={isRegenerating === screen.id}
-                            >
-                              {isRegenerating === screen.id ? (
-                                <>
-                                  <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                                  Generating...
-                                </>
-                              ) : (
-                                <>
-                                  <ImageIcon className='mr-2 h-4 w-4' />
-                                  Generate Image
-                                </>
-                              )}
-                            </Button>
-                          </div>
-                        )}
-                      </CardContent>
-                      <div className='border-t p-3'>
-                        <p className='text-sm text-muted-foreground'>
-                          {screen.content}
-                        </p>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </TabsContent>
 
@@ -423,35 +332,40 @@ export default function ImageVideoGenerator({
                 Customize Images for Each Screen
               </Label>
               <p className='mb-4 text-sm text-muted-foreground'>
-                Select a screen to regenerate its image or edit the existing
-                one.
+                Click on a screen to view details, or use the edit button to
+                modify the image.
               </p>
 
-              <div className='space-y-4'>
+              <div className='grid grid-cols-2 gap-4 md:grid-cols-3'>
                 {scriptScreens.map(screen => (
-                  <Card
+                  <div
                     key={screen.id}
-                    className={`overflow-hidden ${selectedScreen === screen.id ? 'ring-2 ring-primary' : ''}`}
-                    onClick={() => handleSelectScreen(screen.id)}
+                    className='cursor-pointer overflow-hidden rounded-md border transition-all hover:shadow-md'
+                    onClick={() => handleOpenDialog(screen.id)}
                   >
-                    <div className='flex items-center justify-between bg-muted/30 p-4'>
-                      <h3 className='font-medium'>{screen.title}</h3>
-                      <div className='flex space-x-2'>
+                    <div className='flex items-center justify-between truncate bg-muted/30 p-2 text-sm font-medium'>
+                      <span>{screen.title}</span>
+                      <div
+                        className='flex space-x-1'
+                        onClick={e => e.stopPropagation()}
+                      >
                         {screenImages[screen.id] && (
                           <>
                             <Button
                               variant='ghost'
-                              size='sm'
+                              size='icon'
+                              className='h-6 w-6'
                               onClick={e => {
                                 e.stopPropagation()
                                 handleEditImage(screen.id)
                               }}
                             >
-                              <Edit className='h-4 w-4' />
+                              <Edit className='h-3 w-3' />
                             </Button>
                             <Button
                               variant='ghost'
-                              size='sm'
+                              size='icon'
+                              className='h-6 w-6'
                               onClick={e => {
                                 e.stopPropagation()
                                 handleRegenerateImage(screen.id)
@@ -459,48 +373,47 @@ export default function ImageVideoGenerator({
                               disabled={isRegenerating === screen.id}
                             >
                               {isRegenerating === screen.id ? (
-                                <Loader2 className='h-4 w-4 animate-spin' />
+                                <Loader2 className='h-3 w-3 animate-spin' />
                               ) : (
-                                <RefreshCw className='h-4 w-4' />
+                                <RefreshCw className='h-3 w-3' />
                               )}
                             </Button>
                           </>
                         )}
                       </div>
                     </div>
-                    <CardContent className='p-0'>
-                      {screenImages[screen.id] ? (
-                        <img
-                          src={screenImages[screen.id] || '/placeholder.jpg'}
-                          alt={`Image for ${screen.title}`}
-                          className='h-auto w-full'
-                        />
-                      ) : (
-                        <div className='flex h-48 items-center justify-center bg-muted'>
-                          <Button
-                            variant='outline'
-                            onClick={e => {
-                              e.stopPropagation()
-                              handleRegenerateImage(screen.id)
-                            }}
-                            disabled={isRegenerating === screen.id}
-                          >
-                            {isRegenerating === screen.id ? (
-                              <>
-                                <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                                Generating...
-                              </>
-                            ) : (
-                              <>
-                                <ImageIcon className='mr-2 h-4 w-4' />
-                                Generate Image
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
+                    {screenImages[screen.id] ? (
+                      <img
+                        src={screenImages[screen.id] || '/placeholder.jpg'}
+                        alt={`Image for ${screen.title}`}
+                        className='h-auto w-full'
+                      />
+                    ) : (
+                      <div className='flex h-40 items-center justify-center bg-muted'>
+                        <Button
+                          variant='outline'
+                          size='sm'
+                          onClick={e => {
+                            e.stopPropagation()
+                            handleRegenerateImage(screen.id)
+                          }}
+                          disabled={isRegenerating === screen.id}
+                        >
+                          {isRegenerating === screen.id ? (
+                            <>
+                              <Loader2 className='mr-2 h-3 w-3 animate-spin' />
+                              Generating...
+                            </>
+                          ) : (
+                            <>
+                              <ImageIcon className='mr-2 h-3 w-3' />
+                              Generate
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
@@ -511,12 +424,6 @@ export default function ImageVideoGenerator({
                 onClick={() => setActiveTab('generate')}
               >
                 Back to Generate
-              </Button>
-              <Button
-                onClick={() => setActiveTab('video')}
-                disabled={!allScreensHaveImages()}
-              >
-                Continue to Video Creation
               </Button>
             </div>
           </div>
@@ -693,11 +600,12 @@ export default function ImageVideoGenerator({
           <div className='space-y-6'>
             <div>
               <Label>Selected Images for Video</Label>
-              <div className='mt-2 grid grid-cols-2 gap-2 md:grid-cols-3'>
+              <div className='mt-2 grid grid-cols-2 gap-4 md:grid-cols-3'>
                 {scriptScreens.map(screen => (
                   <div
                     key={screen.id}
-                    className='overflow-hidden rounded-md border'
+                    className='cursor-pointer overflow-hidden rounded-md border transition-all hover:shadow-md'
+                    onClick={() => handleOpenDialog(screen.id)}
                   >
                     <div className='truncate bg-muted/30 p-2 text-sm font-medium'>
                       {screen.title}
@@ -781,21 +689,69 @@ export default function ImageVideoGenerator({
                     <p className='mt-2 text-muted-foreground'>Video Preview</p>
                   </div>
                 </div>
-                <div className='mt-4 flex justify-between'>
-                  <Button
-                    variant='outline'
-                    onClick={() => setActiveTab('customize')}
-                  >
-                    <RefreshCw className='mr-2 h-4 w-4' />
-                    Edit Images
-                  </Button>
-                  <Button>Continue to Video Editor</Button>
-                </div>
               </div>
             )}
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Dialog for viewing full image and content */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className='max-w-3xl'>
+          {dialogScreen !== null && (
+            <>
+              <DialogHeader>
+                <DialogTitle className='text-xl'>
+                  {scriptScreens.find(s => s.id === dialogScreen)?.title}
+                </DialogTitle>
+                <DialogDescription>
+                  {scriptScreens.find(s => s.id === dialogScreen)?.content}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className='mt-4 overflow-hidden rounded-md border'>
+                {screenImages[dialogScreen] ? (
+                  <img
+                    src={screenImages[dialogScreen] || '/placeholder.jpg'}
+                    alt={`Full view of ${scriptScreens.find(s => s.id === dialogScreen)?.title}`}
+                    className='h-auto w-full'
+                  />
+                ) : (
+                  <div className='flex h-64 items-center justify-center bg-muted'>
+                    <p className='text-muted-foreground'>
+                      No image generated yet
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className='mt-4 flex justify-between'>
+                <Button
+                  variant='outline'
+                  onClick={() => handleRegenerateImage(dialogScreen)}
+                  disabled={isRegenerating === dialogScreen}
+                >
+                  {isRegenerating === dialogScreen ? (
+                    <>
+                      <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                      Regenerating...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className='mr-2 h-4 w-4' />
+                      Regenerate Image
+                    </>
+                  )}
+                </Button>
+                <Button onClick={() => handleEditImage(dialogScreen)}>
+                  <Edit className='mr-2 h-4 w-4' />
+                  Edit Image & Script
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

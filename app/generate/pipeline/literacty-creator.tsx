@@ -11,6 +11,20 @@ import { Textarea } from '@/components/ui/textarea'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Check, Loader2, Upload, FileText, Type } from 'lucide-react'
+import mammoth from 'mammoth'
+import * as PDFJS from 'pdfjs-dist'
+
+// This works with bundlers that support web workers properly
+PDFJS.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.mjs',
+  import.meta.url
+).toString()
+
+interface FileProcessingResult {
+  content: string
+  success: boolean
+  error?: string
+}
 
 const SUGGESTED_TOPICS = [
   'The Evolution of Artificial Intelligence',
@@ -109,13 +123,43 @@ export default function LiteraryCreator({
     }
   }
 
-  const handleProcessFile = () => {
+  // const handleProcessFile = () => {
+  //   if (!uploadedFile) return
+
+  //   setIsProcessingFile(true)
+
+  //   // Simulate file processing
+  //   setTimeout(() => {
+  //     // Extract file extension
+  //     const fileExt = uploadedFile.name.split('.').pop()?.toLowerCase()
+
+  //     // Set topic to filename without extension
+  //     const fileName = uploadedFile.name.split('.')[0]
+  //     setTopic(fileName)
+  //     setTopicSelected(true)
+
+  //     // Generate simulated content based on file type
+  //     let extractedContent = ''
+  //     if (fileExt === 'pdf') {
+  //       extractedContent = `# Content extracted from PDF: ${uploadedFile.name}\n\nThis is the simulated content extracted from your PDF file. In a real implementation, we would parse the actual PDF content.\n\nThe document appears to discuss important aspects of ${fileName}, including key concepts and practical applications.`
+  //     } else if (fileExt === 'docx' || fileExt === 'doc') {
+  //       extractedContent = `# Content extracted from Word document: ${uploadedFile.name}\n\nThis is the simulated content extracted from your Word document. In a real implementation, we would parse the actual document content.\n\nThe document contains several sections covering ${fileName} with detailed explanations and examples.`
+  //     } else {
+  //       extractedContent = `# Content extracted from ${uploadedFile.name}\n\nThis is the simulated content extracted from your file. The system has attempted to parse the content and prepare it for video creation.`
+  //     }
+
+  //     setGeneratedScript(extractedContent)
+  //     setIsProcessingFile(false)
+  //     setFileProcessed(true)
+  //     setScriptGenerated(true)
+  //   }, 2000)
+  // }
+  const handleProcessFile = async () => {
     if (!uploadedFile) return
 
     setIsProcessingFile(true)
 
-    // Simulate file processing
-    setTimeout(() => {
+    try {
       // Extract file extension
       const fileExt = uploadedFile.name.split('.').pop()?.toLowerCase()
 
@@ -124,21 +168,164 @@ export default function LiteraryCreator({
       setTopic(fileName)
       setTopicSelected(true)
 
-      // Generate simulated content based on file type
+      // Process the file based on type
       let extractedContent = ''
+
       if (fileExt === 'pdf') {
-        extractedContent = `# Content extracted from PDF: ${uploadedFile.name}\n\nThis is the simulated content extracted from your PDF file. In a real implementation, we would parse the actual PDF content.\n\nThe document appears to discuss important aspects of ${fileName}, including key concepts and practical applications.`
+        const result = await extractPdfContent(uploadedFile)
+        if (result.success) {
+          extractedContent = result.content
+        } else {
+          throw new Error(result.error || 'Failed to process PDF')
+        }
       } else if (fileExt === 'docx' || fileExt === 'doc') {
-        extractedContent = `# Content extracted from Word document: ${uploadedFile.name}\n\nThis is the simulated content extracted from your Word document. In a real implementation, we would parse the actual document content.\n\nThe document contains several sections covering ${fileName} with detailed explanations and examples.`
+        const result = await extractWordContent(uploadedFile)
+        if (result.success) {
+          extractedContent = result.content
+        } else {
+          throw new Error(result.error || 'Failed to process Word document')
+        }
+      } else if (fileExt === 'txt' || fileExt === 'text') {
+        const result = await extractTextContent(uploadedFile)
+        if (result.success) {
+          extractedContent = result.content
+        } else {
+          throw new Error(result.error || 'Failed to process text file')
+        }
       } else {
-        extractedContent = `# Content extracted from ${uploadedFile.name}\n\nThis is the simulated content extracted from your file. The system has attempted to parse the content and prepare it for video creation.`
+        throw new Error(`Unsupported file type: ${fileExt}`)
       }
 
-      setGeneratedScript(extractedContent)
-      setIsProcessingFile(false)
+      // Format the extracted content
+      const formattedContent = `# Content extracted from ${uploadedFile.name}\n\n${extractedContent}`
+
+      setGeneratedScript(formattedContent)
       setFileProcessed(true)
       setScriptGenerated(true)
-    }, 2000)
+    } catch (error) {
+      console.error('Error processing file:', error)
+    } finally {
+      setIsProcessingFile(false)
+    }
+  }
+
+  /**
+   * Extract text from a PDF file
+   */
+  const extractPdfContent = async (
+    file: File
+  ): Promise<FileProcessingResult> => {
+    try {
+      // Convert the file to an ArrayBuffer
+      const arrayBuffer = await file.arrayBuffer()
+
+      // Load the PDF document
+      const pdfDoc = await PDFJS.getDocument({ data: arrayBuffer }).promise
+
+      // Variable to store all text content
+      let fullText = ''
+
+      // Process each page
+      for (let i = 1; i <= pdfDoc.numPages; i++) {
+        const page = await pdfDoc.getPage(i)
+        const textContent = await page.getTextContent()
+
+        // Extract text from each text item and join with spaces
+        const pageText = textContent.items
+          .filter(item => 'str' in item) // Make sure item has a 'str' property
+          .map(item => ('str' in item ? (item as any).str : ''))
+          .join(' ')
+
+        fullText += pageText + '\n\n'
+      }
+
+      return {
+        content: fullText.trim(),
+        success: true
+      }
+    } catch (error) {
+      console.error('Error extracting PDF content:', error)
+      return {
+        content: '',
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unknown error extracting PDF content'
+      }
+    }
+  }
+
+  /**
+   * Extract text from a Word document (DOC/DOCX)
+   */
+  const extractWordContent = async (
+    file: File
+  ): Promise<FileProcessingResult> => {
+    try {
+      // Convert the file to an ArrayBuffer
+      const arrayBuffer = await file.arrayBuffer()
+
+      // Use mammoth to extract text content
+      const result = await mammoth.extractRawText({ arrayBuffer })
+
+      return {
+        content: result.value,
+        success: true
+      }
+    } catch (error) {
+      console.error('Error extracting Word document content:', error)
+      return {
+        content: '',
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unknown error extracting Word document content'
+      }
+    }
+  }
+
+  /**
+   * Extract text from a plain text file
+   */
+  const extractTextContent = async (
+    file: File
+  ): Promise<FileProcessingResult> => {
+    try {
+      // Use FileReader to read the text file
+      return new Promise(resolve => {
+        const reader = new FileReader()
+
+        reader.onload = e => {
+          const content = (e.target?.result as string) || ''
+          resolve({
+            content,
+            success: true
+          })
+        }
+
+        reader.onerror = () => {
+          resolve({
+            content: '',
+            success: false,
+            error: 'Error reading text file'
+          })
+        }
+
+        reader.readAsText(file)
+      })
+    } catch (error) {
+      console.error('Error extracting text file content:', error)
+      return {
+        content: '',
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unknown error extracting text file content'
+      }
+    }
   }
 
   // Drag and drop handlers

@@ -63,10 +63,19 @@ export default function VoiceConfiguration({
     }, 3000)
   }
 
+  useEffect(() => {
+    if (provider === 'elevenlabs') {
+      setVoice('Rachel')
+    } else if (provider === 'google') {
+      setVoice('Standard')
+    } else if (provider === 'amazon') {
+      setVoice('Joanna')
+    }
+  }, [provider])
+
   const handleComplete = () => {
     setIsConfigurationComplete(true)
   }
-
 
   return (
     <div>
