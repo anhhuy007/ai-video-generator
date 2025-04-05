@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createUser } from '@/app/service/service'
+import { createGoogleUser } from '@/app/service/service'
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const user = await createUser(googleId, email, name, avatarUrl)
+    const user = await createGoogleUser(googleId, email, name, avatarUrl)
     return NextResponse.json({ user }, { status: 201 })
   } catch (error) {
     console.error('Error creating user:', error)
