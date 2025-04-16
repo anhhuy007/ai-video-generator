@@ -1,5 +1,5 @@
 'use server'
-
+// app/service/galery.service.ts
 import { sql } from '@/app/utils/database'
 
 export async function createGalleryEntry(videoUrl: string, addedBy: string) {

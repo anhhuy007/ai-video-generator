@@ -1,4 +1,5 @@
 'use server'
+// app/api/gen_history/route.ts
 import { NextResponse } from 'next/server'
 import {
   createGenHistory,

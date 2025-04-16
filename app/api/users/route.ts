@@ -5,7 +5,7 @@ import {
   deleteUser,
   getUserByGoogleId
 } from '@/app/service/user.service'
-
+// app/api/users/route.ts
 export async function POST(req: Request) {
   try {
     const { googleId, email, name, avatarUrl } = await req.json()

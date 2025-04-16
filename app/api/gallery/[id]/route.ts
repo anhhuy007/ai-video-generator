@@ -1,4 +1,5 @@
 'use server'
+// app/api/gallery/[id]/route.ts
 import { NextResponse } from 'next/server'
 import {
   getGalleryEntryById

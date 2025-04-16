@@ -1,4 +1,5 @@
 'use server'
+// app/api/gen_history/[id]/route.ts
 import { NextResponse } from 'next/server'
 import { getGenHistoryById } from '@/app/service/genHistory.service'
 export async function GET(

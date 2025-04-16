@@ -5,6 +5,7 @@ import path from 'path'
 import os from 'os'
 import fs from 'fs/promises'
 
+// app/api/upload/route.ts
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,

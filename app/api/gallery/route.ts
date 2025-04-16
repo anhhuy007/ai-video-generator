@@ -1,5 +1,5 @@
 'use server'
-
+// app/api/gallery/route.ts
 import { NextResponse } from 'next/server'
 import {
   createGalleryEntry,

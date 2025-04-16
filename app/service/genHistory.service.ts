@@ -1,7 +1,7 @@
 'use server'
 
 import { sql } from '@/app/utils/database'
-
+// app/service/genHistory.service.ts
 export async function createGenHistory(
   userId: string,
   prompt: string,
