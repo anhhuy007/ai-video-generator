@@ -14,9 +14,7 @@ import Publishing from '@/app/generate/pipeline/publishing'
 const steps = [
   { id: 'literary', label: 'Literary Content' },
   { id: 'voice', label: 'Voice Config' },
-  { id: 'images', label: 'Images & Video' },
-  { id: 'editor', label: 'Video Editor' },
-  { id: 'publish', label: 'Publishing' }
+  { id: 'images', label: 'Images & Video' }
 ]
 
 export default function GeneratePage() {
