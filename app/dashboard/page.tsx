@@ -8,8 +8,10 @@ import { VideoGenerator } from '@/app/dashboard/tabs/generate/generator'
 import { VideoGallery } from '@/app/dashboard/tabs/gallery/gallery'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { UsageStats } from '@/app/dashboard/tabs/usage/usage'
+import { signOut, useSession } from 'next-auth/react'
 
 export function DashboardPage() {
+  const session = useSession()
   const [activeTab, setActiveTab] = useState('generate')
 
   return (
@@ -17,7 +19,15 @@ export function DashboardPage() {
       <div className='flex h-screen w-full overflow-hidden bg-background'>
         <DashboardSidebar />
         <div className='flex flex-1 flex-col overflow-hidden'>
-          <DashboardHeader />
+          <DashboardHeader 
+            session={session.data}
+            onSignOut={
+              () => {
+                console.log('Sign out clicked')
+                signOut()
+              }
+            }
+          />
           <main className='flex-1 overflow-auto p-4 md:p-6'>
             <Tabs
               value={activeTab}

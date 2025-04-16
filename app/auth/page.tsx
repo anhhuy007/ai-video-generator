@@ -1,24 +1,32 @@
-import type { Metadata } from 'next'
-import AuthForm from '@/app/auth/components/auth-form'
-import { Particles } from '@/components/magicui/particles'
-// import VideoBackground from "@/components/ui-elements/video-background"
-// import Logo from "@/components/ui-elements/logo"
+'use client'
 
-export const metadata: Metadata = {
-  title: 'VideoAI - AI-Powered Video Generation',
-  description: 'Generate stunning videos with the power of AI'
-}
+import { use, useEffect } from 'react'
+import SignInForm from './components/sign-in-form'
+import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 
-export default function Home() {
+export default function AuthenticationPage() {
+  const { data: session, status } = useSession()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (status === 'authenticated') {
+      router.push('/')
+    }
+  }, [status, router])
+
   return (
     <main className='relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-white to-slate-100'>
-      {/* <VideoBackground /> */}
-
       <div className='relative z-10 w-full max-w-md px-4 sm:px-0'>
         <div className='mb-8 flex justify-center'>{/* <Logo /> */}</div>
 
         <div className='rounded-lg border border-slate-200 bg-white/80 p-6 shadow-lg backdrop-blur-md'>
-          <AuthForm />
+          <SignInForm
+            onSuccess={() => {
+              router.push('/')
+            }}
+            onSignUpClick={() => {}}
+          />
         </div>
 
         <p className='mt-6 text-center text-sm text-slate-500'>

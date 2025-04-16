@@ -2,7 +2,7 @@
 
 import { sql } from '@/app/utils/database'
 
-export async function createUser(
+export async function createGoogleUser(
   googleId: string,
   email: string,
   name?: string,
