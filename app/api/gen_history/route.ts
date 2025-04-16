@@ -28,10 +28,14 @@ export async function POST(req: Request) {
 
 export async function GET(req: Request) {
   try {
-    const { userId } = await req.json()
+    // Get userId from URL query parameter instead of body
+    const url = new URL(req.url)
+    const userId = url.searchParams.get('userId')
+
     if (!userId) {
       return NextResponse.json({ error: 'userId is required' }, { status: 400 })
     }
+
     const historyEntries = await getGenHistoryForUser(userId)
     return NextResponse.json({ historyEntries }, { status: 200 })
   } catch (error) {

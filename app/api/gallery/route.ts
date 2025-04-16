@@ -8,14 +8,14 @@ import {
 
 export async function POST(req: Request) {
   try {
-    const { videoUrl, addedBy } = await req.json()
-    if (!videoUrl || !addedBy) {
+    const { videoUrl, title, addedBy } = await req.json()
+    if (!videoUrl || !title || !addedBy) {
       return NextResponse.json(
-        { error: 'videoUrl and addedBy are required' },
+        { error: 'videoUrl, title, and addedBy are required' },
         { status: 400 }
       )
     }
-    const galleryEntry = await createGalleryEntry(videoUrl, addedBy)
+    const galleryEntry = await createGalleryEntry(videoUrl, title, addedBy)
     return NextResponse.json({ galleryEntry }, { status: 201 })
   } catch (error) {
     console.error('Error creating gallery entry:', error)
@@ -25,6 +25,7 @@ export async function POST(req: Request) {
     )
   }
 }
+
 
 export async function GET() {
   try {

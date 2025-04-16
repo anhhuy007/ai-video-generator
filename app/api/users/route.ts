@@ -47,7 +47,10 @@ export async function PATCH(req: Request) {
 // Xóa người dùng
 export async function DELETE(req: Request) {
   try {
-    const { userId } = await req.json()
+    // Lấy userId từ query parameter thay vì body
+    const url = new URL(req.url)
+    const userId = url.searchParams.get('userId')
+
     if (!userId) {
       return NextResponse.json({ error: 'userId is required' }, { status: 400 })
     }
@@ -65,7 +68,10 @@ export async function DELETE(req: Request) {
 // Lấy thông tin người dùng qua googleId
 export async function GET(req: Request) {
   try {
-    const { googleId } = await req.json()
+    // Lấy googleId từ query parameter thay vì body
+    const url = new URL(req.url)
+    const googleId = url.searchParams.get('googleId')
+
     if (!googleId) {
       return NextResponse.json(
         { error: 'googleId is required' },

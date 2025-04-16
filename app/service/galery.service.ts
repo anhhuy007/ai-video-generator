@@ -2,14 +2,19 @@
 // app/service/galery.service.ts
 import { sql } from '@/app/utils/database'
 
-export async function createGalleryEntry(videoUrl: string, addedBy: string) {
+export async function createGalleryEntry(
+  videoUrl: string,
+  title: string,
+  addedBy: string
+) {
   const result = await sql`
-    INSERT INTO gallery (video_url, added_by)
-    VALUES (${videoUrl}, ${addedBy})
+    INSERT INTO gallery (video_url, title, added_by)
+    VALUES (${videoUrl}, ${title}, ${addedBy})
     RETURNING *;
   `
   return result[0]
 }
+
 
 export async function getGalleryEntries() {
   const result = await sql`
