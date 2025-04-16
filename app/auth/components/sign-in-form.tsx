@@ -1,7 +1,7 @@
 'use client'
 
 import { signIn } from 'next-auth/react'
-import { useState } from 'react'
+import { useState, SVGProps } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -25,6 +25,23 @@ interface SignInFormProps {
   onSignUpClick: () => void
 }
 
+export function Google(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      width="1em"
+      height="1em"
+      {...props}
+    >
+      <path
+        fill="currentColor"
+        d="M21.594 11.08H12.32v2.746h6.656c-.356 3.812-3.457 5.46-6.462 5.46c-3.813 0-7.205-2.972-7.205-7.27c0-4.135 3.23-7.27 7.205-7.27c3.037 0 4.879 1.971 4.879 1.971l1.874-1.97S16.748 2 12.386 2C6.634 1.968 2.24 6.782 2.24 11.984C2.24 17.024 6.376 22 12.483 22c5.395 0 9.272-3.651 9.272-9.111c.033-1.131-.161-1.81-.161-1.81"
+      ></path>
+    </svg>
+  )
+}
+
 export default function SignInForm({
   onSuccess,
   onSignUpClick
@@ -46,7 +63,6 @@ export default function SignInForm({
   async function onSubmit(data: SignInFormValues) {
     setIsLoading(true)
     try {
-      console.log('Sign in data:', data)
       await new Promise(resolve => setTimeout(resolve, 1000))
       onSuccess()
     } catch (error) {
@@ -127,9 +143,10 @@ export default function SignInForm({
       <div className='grid grid-cols-1 gap-2'>
         <Button
           variant='outline'
-          className='border-slate-200 bg-white'
+          className='flex items-center gap-2 border-slate-200 bg-white'
           onClick={() => signIn('google')}
         >
+          <Google className='h-4 w-4' />
           Google
         </Button>
       </div>

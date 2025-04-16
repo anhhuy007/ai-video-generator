@@ -1,7 +1,27 @@
 'use server'
 
 import { sql } from '@/app/utils/database'
-// app/service/user.service.ts
+
+
+
+export async function createGoogleUser(
+  googleId: string,
+  email: string,
+  name?: string,
+  avatarUrl?: string
+) {
+  // create a new user or update existing user
+  // using the googleId as the unique identifier
+  const result = await sql`
+    INSERT INTO users (google_id, email, name, avatar_url)
+    VALUES (${googleId}, ${email}, ${name ?? null}, ${avatarUrl ?? null})
+    ON CONFLICT (google_id) DO UPDATE
+    SET email = EXCLUDED.email, name = EXCLUDED.name, avatar_url = EXCLUDED.avatar_url
+    RETURNING *;
+  `
+  return result[0]
+}
+
 export async function createUser(
   googleId: string,
   email: string,

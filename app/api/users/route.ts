@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import {
-  createUser,
+  createGoogleUser,
   updateUser,
   deleteUser,
   getUserByGoogleId
@@ -15,7 +15,7 @@ export async function POST(req: Request) {
         { status: 400 }
       )
     }
-    const user = await createUser(googleId, email, name, avatarUrl)
+    const user = await createGoogleUser(googleId, email, name, avatarUrl)
     return NextResponse.json({ user }, { status: 201 })
   } catch (error) {
     console.error('Error creating user:', error)
