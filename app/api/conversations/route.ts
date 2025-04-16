@@ -1,63 +1,26 @@
 import { NextResponse } from 'next/server'
-import {
-  createConversation,
-  getConversationsForUser,
-  deleteConversation
-} from '@/app/service/service'
+import { elevenlabs } from '@/lib/elevenlabs'
+import { streamToBuffer } from '@/lib/utils'
 
-// Tạo mới cuộc trò chuyện
 export async function POST(req: Request) {
-  try {
-    const { userId } = await req.json()
-    if (!userId) {
-      return NextResponse.json({ error: 'userId is required' }, { status: 400 })
-    }
-    const conversation = await createConversation(userId)
-    return NextResponse.json({ conversation }, { status: 201 })
-  } catch (error) {
-    console.error('Error creating conversation:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
-  }
-}
+  const { text, voice, speed, stability, style } = await req.json()
 
-// Lấy danh sách cuộc trò chuyện của người dùng
-export async function GET(req: Request) {
-  try {
-    const { userId } = await req.json()
-    if (!userId) {
-      return NextResponse.json({ error: 'userId is required' }, { status: 400 })
+  const audio = await elevenlabs.generate({
+    voice,
+    text,
+    model_id: 'eleven_flash_v2_5',
+    voice_settings: {
+      speed: speed,
+      stability: stability,
+      style: style
     }
-    const conversations = await getConversationsForUser(userId)
-    return NextResponse.json({ conversations }, { status: 200 })
-  } catch (error) {
-    console.error('Error fetching conversations:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
-  }
-}
+  })
 
-// Xóa cuộc trò chuyện
-export async function DELETE(req: Request) {
-  try {
-    const { conversationId } = await req.json()
-    if (!conversationId) {
-      return NextResponse.json(
-        { error: 'conversationId is required' },
-        { status: 400 }
-      )
+  const audioBuffer = await streamToBuffer(audio)
+
+  return new NextResponse(audioBuffer, {
+    headers: {
+      'Content-Type': 'audio/mpeg'
     }
-    const conversation = await deleteConversation(conversationId)
-    return NextResponse.json({ conversation }, { status: 200 })
-  } catch (error) {
-    console.error('Error deleting conversation:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
-  }
+  })
 }

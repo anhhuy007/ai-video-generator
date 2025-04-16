@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Check, Loader2, Upload, FileText, Type } from 'lucide-react'
+import { Scene, Story } from '@/app/utils/type'
 
 const SUGGESTED_TOPICS = [
   'The Evolution of Artificial Intelligence',
@@ -19,6 +20,27 @@ const SUGGESTED_TOPICS = [
   'Understanding Quantum Computing',
   'The History of Cinema'
 ]
+
+function extractScript(data: any): string {
+  // Log the data to verify its structure
+  // console.log('Data received:', data.story.prompt);
+
+  const parsedData = JSON.parse(data);
+  const story = parsedData.story as Story;
+  console.log('Parsed data:', parsedData);
+
+  try {
+    // You can skip JSON parsing if `data` is already an object
+    // Format the story into the desired string format
+    return story.scenes
+      .map((scene: Scene) => `# ${scene.title}\n${scene.narration}`)
+      .join('\n\n');
+  } catch (error) {
+    console.error('Error processing scenes:', error);
+    return '';
+  }
+}
+
 
 export default function LiteraryCreator({
   onComplete
@@ -31,6 +53,7 @@ export default function LiteraryCreator({
   const [isGenerating, setIsGenerating] = useState(false)
   const [isScriptApproved, setIsScriptApproved] = useState(false)
   const [activeTab, setActiveTab] = useState('topic')
+  const [error, setError] = useState('')
 
   // Input method state
   const [inputMethod, setInputMethod] = useState<'type' | 'upload'>('type')
@@ -72,22 +95,69 @@ export default function LiteraryCreator({
     if (!topic) return
 
     setIsGenerating(true)
+    setError('')
 
-    // Simulate AI script generation
-    setTimeout(() => {
-      const scriptIntros = {
-        analysis: `# Analysis: ${topic}\n\nIn this comprehensive analysis, we'll explore the key aspects of ${topic} and its implications for our future. The subject presents several interesting dimensions worth examining in detail.`,
-        storytelling: `# The Story of ${topic}\n\nOnce upon a time, in a world not so different from our own, the concept of ${topic} began to take shape. This is the remarkable journey of how it evolved and changed our understanding.`,
-        poetry: `# Poetic Illustration: ${topic}\n\nThrough the lens of time,\n${topic} emerges, sublime.\nPatterns unfold, mysteries defined,\nIn verses of knowledge, beautifully aligned.`
-      }
-
-      setGeneratedScript(
-        scriptIntros[contentStyle as keyof typeof scriptIntros]
-      )
+    // Option 1: Use the API endpoint if available
+    try {
+      fetch('http://127.0.0.1:8787/api/generate-story-outline', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          prompt: topic,
+          sceneCount: 5
+        })
+      })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`Network response error: ${response.status}`)
+          }
+          return response.text()
+        })
+        .then(data => {
+          try {
+            const script = extractScript(data)
+            setGeneratedScript(script)
+            setScriptGenerated(true)
+            setActiveTab('preview')
+          } catch (err) {
+            console.error('Error extracting script:', err)
+            setError('Failed to process the generated script data')
+            // Fall back to the simulated script as a backup
+            handleFallbackScriptGeneration()
+          }
+        })
+        .catch(error => {
+          console.error('Error generating script:', error)
+          setError(`Failed to generate script: ${error.message}`)
+          // Fall back to the simulated script
+          handleFallbackScriptGeneration()
+        })
+        .finally(() => {
+          setIsGenerating(false)
+        })
+    } catch (error) {
+      console.error('Exception during fetch:', error)
+      handleFallbackScriptGeneration()
       setIsGenerating(false)
-      setScriptGenerated(true)
-      setActiveTab('preview')
-    }, 2000)
+    }
+  }
+
+  // Fallback method if the API is unavailable
+  const handleFallbackScriptGeneration = () => {
+    // Simulate AI script generation with a fallback
+    console.log('Using fallback script generation')
+
+    const scriptIntros = {
+      analysis: `# Analysis: ${topic}\n\nIn this comprehensive analysis, we'll explore the key aspects of ${topic} and its implications for our future. The subject presents several interesting dimensions worth examining in detail.`,
+      storytelling: `# The Story of ${topic}\n\nOnce upon a time, in a world not so different from our own, the concept of ${topic} began to take shape. This is the remarkable journey of how it evolved and changed our understanding.`,
+      poetry: `# Poetic Illustration: ${topic}\n\nThrough the lens of time,\n${topic} emerges, sublime.\nPatterns unfold, mysteries defined,\nIn verses of knowledge, beautifully aligned.`
+    }
+
+    setGeneratedScript(scriptIntros[contentStyle as keyof typeof scriptIntros])
+    setScriptGenerated(true)
+    setActiveTab('preview')
   }
 
   const handleScriptEdit = (newScript: string) => {
@@ -219,7 +289,7 @@ export default function LiteraryCreator({
                   <Label htmlFor='topic'>Enter your topic</Label>
                   <Input
                     id='topic'
-                    placeholder='Enter a  literary topic'
+                    placeholder='Enter a literary topic'
                     value={topic}
                     onChange={e => {
                       setTopic(e.target.value)
@@ -282,6 +352,12 @@ export default function LiteraryCreator({
                     </div>
                   </RadioGroup>
                 </div>
+
+                {error && (
+                  <div className='rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-500'>
+                    {error}
+                  </div>
+                )}
 
                 <Button
                   onClick={handleGenerateScript}
