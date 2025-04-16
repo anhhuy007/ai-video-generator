@@ -112,7 +112,7 @@ export default function VoiceConfiguration({
         '/api/conversations',
         {
           text: 'Đây là một đoạn văn bản mẫu để kiểm tra giọng nói.',
-          voiceId: selectedVoiceId,
+          voice: getSelectedVoiceName(),
           speed: Number.parseFloat(speed),
           stability: Number.parseFloat(stability),
           style: Number.parseFloat(style)

@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Slider } from '@/components/ui/slider'
+import Image from 'next/image'
+
 import {
   Check,
   ImageIcon,
@@ -14,7 +16,8 @@ import {
   RefreshCw,
   Edit,
   Maximize,
-  Minimize
+  Minimize,
+  Download,
 } from 'lucide-react'
 import {
   Select,
@@ -25,14 +28,19 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
+import axios from 'axios'
+import { useGenerationStore } from '@/store/useGenerationStore'
+import { Scene } from '@/app/utils/type'
+interface ImageVideoGeneratorProps {
+  scenes: Scene[]
+  onComplete?: () => void
+}
 
 const IMAGE_STYLES = [
-  { id: 'sketch', name: 'Sketch' },
-  { id: 'classic', name: 'Classic' },
-  { id: 'modern', name: 'Modern' },
-  { id: 'abstract', name: 'Abstract' },
   { id: 'realistic', name: 'Realistic' },
-  { id: 'cartoon', name: 'Cartoon' }
+  { id: 'artistic', name: 'Artistic' },
+  { id: 'cartoon', name: 'Cartoon' },
+  { id: 'cinematic', name: 'Cinematic' }
 ]
 
 const ASPECT_RATIOS = [
@@ -42,62 +50,25 @@ const ASPECT_RATIOS = [
   { id: '9:16', name: 'Vertical (9:16)' }
 ]
 
-// Mock script screens from the Literary Creator
-const MOCK_SCRIPT_SCREENS = [
-  {
-    id: 1,
-    title: 'Introduction',
-    content:
-      'Introducing the concept of artificial intelligence and its evolution.'
-  },
-  {
-    id: 2,
-    title: 'Historical Context',
-    content:
-      'The history of AI from early computing to modern machine learning.'
-  },
-  {
-    id: 3,
-    title: 'Current Applications',
-    content: 'How AI is used today in various industries and everyday life.'
-  },
-  {
-    id: 4,
-    title: 'Future Possibilities',
-    content: 'The potential future developments and impacts of AI technology.'
-  },
-  {
-    id: 5,
-    title: 'Ethical Considerations',
-    content: 'Exploring the ethical questions surrounding AI development.'
-  },
-  {
-    id: 6,
-    title: 'Conclusion',
-    content: "Summarizing the key points about AI's role in our future."
-  }
-]
-
 export default function ImageVideoGenerator({
-  onComplete
-}: {
-  onComplete: () => void
-}) {
+  onComplete = () => {}
+}: ImageVideoGeneratorProps) {
   const [activeTab, setActiveTab] = useState('generate')
-  const [imageStyle, setImageStyle] = useState('classic')
+  const [imageStyle, setImageStyle] = useState('realistic')
   const [aspectRatio, setAspectRatio] = useState('16:9')
-  const [colorIntensity, setColorIntensity] = useState([7])
   const [isGenerating, setIsGenerating] = useState(false)
   const [isRegenerating, setIsRegenerating] = useState<number | null>(null)
   const [motionEffect, setMotionEffect] = useState('pan')
   const [isCreatingVideo, setIsCreatingVideo] = useState(false)
   const [videoCreated, setVideoCreated] = useState(false)
 
+  const { story } = useGenerationStore()
+
   // Screen-based image generation
-  const [scriptScreens, setScriptScreens] = useState(MOCK_SCRIPT_SCREENS)
-  const [screenImages, setScreenImages] = useState<{ [key: number]: string }>(
-    {}
-  )
+  const [scriptScreens, setScriptScreens] = useState(story.scenes)
+  const [screenImages, setScreenImages] = useState<{
+    [screenId: number]: string
+  }>({})
   const [selectedScreen, setSelectedScreen] = useState<number | null>(null)
   const [currentEditingScreen, setCurrentEditingScreen] = useState<
     number | null
@@ -111,6 +82,7 @@ export default function ImageVideoGenerator({
 
   // Add a new state for editing script text
   const [editingScriptText, setEditingScriptText] = useState<string>('')
+  const [generationError, setGenerationError] = useState<string | null>(null)
 
   // Update completion status when all screens have images and video is created
   useEffect(() => {
@@ -121,90 +93,143 @@ export default function ImageVideoGenerator({
 
   // Check if all screens have images
   const allScreensHaveImages = () => {
-    return scriptScreens.every(screen => screenImages[screen.id])
+    return (
+      scriptScreens.length > 0 &&
+      scriptScreens.every(screen => screenImages[screen.id])
+    )
   }
 
-  const handleGenerateAllImages = () => {
+  const generateImagePrompt = (screen: Scene, style: string) => {
+    return `Generate a ${style} image of the scene: ${screen.image}`
+  }
+
+  const handleGenerateAllImages = async () => {
     setIsGenerating(true)
+    setGenerationError(null)
 
-    // Simulate API call to generate images for all screens
-    setTimeout(() => {
-      const newImages: { [key: number]: string } = {}
+    const newImages: { [key: number]: string } = { ...screenImages }
 
-      scriptScreens.forEach(screen => {
-        newImages[screen.id] =
-          `/placeholder.jpg?height=400&width=${aspectRatio === '1:1' ? 400 : aspectRatio === '9:16' ? 225 : 711}&text=${encodeURIComponent(screen.title)}`
-      })
+    try {
+      await Promise.all(
+        scriptScreens.map(async screen => {
+          try {
+            const prompt = generateImagePrompt(screen, imageStyle)
+            const response = await axios.post('/api/generation/image', {
+              prompt
+            })
+
+            if (response.data.image) {
+              newImages[screen.id] = response.data.image
+            } else {
+              console.error(`No image returned for screen ${screen.id}`)
+            }
+          } catch (error) {
+            console.error(
+              `Error generating image for screen ${screen.id}:`,
+              error
+            )
+          }
+        })
+      )
 
       setScreenImages(newImages)
+    } catch (error) {
+      console.error('Error generating images:', error)
+      setGenerationError(
+        'Failed to generate one or more images. Please try again.'
+      )
+    } finally {
       setIsGenerating(false)
-    }, 3000)
+    }
   }
 
-  const handleRegenerateImage = (screenId: number) => {
+  const handleRegenerateImage = async (screenId: number) => {
     setIsRegenerating(screenId)
+    setGenerationError(null)
 
-    // Simulate API call to regenerate a specific image
-    setTimeout(() => {
-      setScreenImages(prev => ({
-        ...prev,
-        [screenId]: `/placeholder.jpg?height=400&width=${aspectRatio === '1:1' ? 400 : aspectRatio === '9:16' ? 225 : 711}&text=${encodeURIComponent(scriptScreens.find(s => s.id === screenId)?.title || '')}&v=${Math.random()}`
-      }))
+    try {
+      const screen = scriptScreens.find(s => s.id === screenId)
+      if (!screen) return
+
+      const prompt = generateImagePrompt(screen, imageStyle)
+      const response = await axios.post('/api/generation/image', {
+        prompt
+      })
+
+      if (response.data.image) {
+        setScreenImages(prev => ({
+          ...prev,
+          [screenId]: response.data.image
+        }))
+      } else {
+        throw new Error('No image returned from API')
+      }
+    } catch (error) {
+      console.error(`Error regenerating image for screen ${screenId}:`, error)
+      setGenerationError('Failed to regenerate image. Please try again.')
+    } finally {
       setIsRegenerating(null)
-    }, 2000)
+    }
   }
 
   const handleSelectScreen = (screenId: number) => {
     setSelectedScreen(screenId === selectedScreen ? null : screenId)
   }
 
-  // Update the handleEditImage function to also set the script text
   const handleEditImage = (screenId: number) => {
     setCurrentEditingScreen(screenId)
     // Set the current script text for editing
     const screen = scriptScreens.find(s => s.id === screenId)
     if (screen) {
-      setEditingScriptText(screen.content)
+      setEditingScriptText(screen.image)
     }
     setActiveTab('edit')
   }
 
-  // Add a function to handle script regeneration
-  const handleRegenerateWithScript = () => {
+  const handleRegenerateWithScript = async () => {
     if (currentEditingScreen === null) return
+    setIsRegenerating(currentEditingScreen)
+    setGenerationError(null)
 
     // Update the script content
-    setScriptScreens(prev =>
-      prev.map(screen =>
-        screen.id === currentEditingScreen
-          ? { ...screen, content: editingScriptText }
-          : screen
-      )
+    const updatedScreens = scriptScreens.map(screen =>
+      screen.id === currentEditingScreen
+        ? { ...screen, content: editingScriptText, image: editingScriptText }
+        : screen
     )
+    setScriptScreens(updatedScreens)
 
-    // Regenerate the image
-    setIsRegenerating(currentEditingScreen)
+    try {
+      const screen = updatedScreens.find(s => s.id === currentEditingScreen)
+      if (!screen) return
 
-    // Simulate API call to regenerate based on new script
-    setTimeout(() => {
-      setScreenImages(prev => ({
-        ...prev,
-        [currentEditingScreen]: `/placeholder.jpg?height=400&width=${aspectRatio === '1:1' ? 400 : aspectRatio === '9:16' ? 225 : 711}&text=${encodeURIComponent(editingScriptText.substring(0, 20))}&v=${Math.random()}`
-      }))
+      const prompt = generateImagePrompt(screen, imageStyle)
+      const response = await axios.post('/api/generation/image', {
+        prompt
+      })
+
+      if (response.data.image) {
+        setScreenImages(prev => ({
+          ...prev,
+          [currentEditingScreen]: response.data.image
+        }))
+      } else {
+        throw new Error('No image returned from API')
+      }
+    } catch (error) {
+      console.error(`Error regenerating image with new script:`, error)
+      setGenerationError(
+        'Failed to regenerate image with new script. Please try again.'
+      )
+    } finally {
       setIsRegenerating(null)
-    }, 2000)
+    }
   }
 
   const handleSaveEdit = () => {
+    // Apply the image adjustments
     // In a real implementation, this would apply the edits to the image
-    // For now, we'll just simulate a change by adding a random parameter to the URL
-    if (currentEditingScreen) {
-      setScreenImages(prev => ({
-        ...prev,
-        [currentEditingScreen]:
-          prev[currentEditingScreen] + `&edited=true&t=${Date.now()}`
-      }))
-    }
+    // For now, we'll just save the current state
     setActiveTab('customize')
     setCurrentEditingScreen(null)
   }
@@ -221,13 +246,32 @@ export default function ImageVideoGenerator({
     }, 4000)
   }
 
+  const handleDownloadImage = (screenId: number) => {
+    const image = screenImages[screenId]
+    if (!image) return
+
+    // Create a temporary link element
+    const link = document.createElement('a')
+    link.href = image
+    link.download = `image-${screenId}.png`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   return (
-    <div>
+    <div className='mx-auto w-full max-w-4xl'>
       <h2 className='mb-4 text-2xl font-bold'>AI Image & Video Generator</h2>
       <p className='mb-6 text-muted-foreground'>
         Generate images for each screen in your script, customize them, and
         create a video.
       </p>
+
+      {generationError && (
+        <div className='mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-red-700'>
+          {generationError}
+        </div>
+      )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className='w-full'>
         <TabsList className='mb-6 grid w-full grid-cols-4'>
@@ -253,7 +297,7 @@ export default function ImageVideoGenerator({
               <RadioGroup
                 value={imageStyle}
                 onValueChange={setImageStyle}
-                className='mt-2 grid grid-cols-2 gap-3 md:grid-cols-3'
+                className='mt-2 grid grid-cols-2 gap-3 md:grid-cols-4'
               >
                 {IMAGE_STYLES.map(style => (
                   <div
@@ -286,29 +330,9 @@ export default function ImageVideoGenerator({
               </RadioGroup>
             </div>
 
-            <div>
-              <div className='mb-2 flex justify-between'>
-                <Label>Color Intensity</Label>
-                <span className='text-sm text-muted-foreground'>
-                  {colorIntensity[0]}/10
-                </span>
-              </div>
-              <Slider
-                value={colorIntensity}
-                onValueChange={setColorIntensity}
-                min={1}
-                max={10}
-                step={1}
-              />
-              <div className='mt-1 flex justify-between text-xs text-muted-foreground'>
-                <span>Muted</span>
-                <span>Vibrant</span>
-              </div>
-            </div>
-
             <Button
               onClick={handleGenerateAllImages}
-              disabled={isGenerating}
+              disabled={isGenerating || scriptScreens.length === 0}
               className='w-full'
             >
               {isGenerating ? (
@@ -320,6 +344,14 @@ export default function ImageVideoGenerator({
                 'Generate Images for All Screens'
               )}
             </Button>
+
+            {scriptScreens.length === 0 && (
+              <div className='rounded-md border bg-muted/20 p-8 text-center'>
+                <p className='text-muted-foreground'>
+                  No scenes available. Please add scenes to generate images.
+                </p>
+              </div>
+            )}
 
             {Object.keys(screenImages).length > 0 && (
               <div>
@@ -339,36 +371,58 @@ export default function ImageVideoGenerator({
                     <Card key={screen.id} className='overflow-hidden'>
                       <div className='flex items-center justify-between bg-muted/30 p-4'>
                         <h3 className='font-medium'>{screen.title}</h3>
-                        {screenImages[screen.id] && (
-                          <Button
-                            variant='ghost'
-                            size='sm'
-                            onClick={() => handleRegenerateImage(screen.id)}
-                            disabled={isRegenerating === screen.id}
-                          >
-                            {isRegenerating === screen.id ? (
-                              <Loader2 className='h-4 w-4 animate-spin' />
-                            ) : (
-                              <RefreshCw className='h-4 w-4' />
-                            )}
-                          </Button>
-                        )}
+                        <div className='flex space-x-1'>
+                          {screenImages[screen.id] && (
+                            <>
+                              <Button
+                                variant='ghost'
+                                size='sm'
+                                onClick={() => handleDownloadImage(screen.id)}
+                              >
+                                <Download className='h-4 w-4' />
+                              </Button>
+                              <Button
+                                variant='ghost'
+                                size='sm'
+                                onClick={() => handleRegenerateImage(screen.id)}
+                                disabled={isRegenerating === screen.id}
+                              >
+                                {isRegenerating === screen.id ? (
+                                  <Loader2 className='h-4 w-4 animate-spin' />
+                                ) : (
+                                  <RefreshCw className='h-4 w-4' />
+                                )}
+                              </Button>
+                            </>
+                          )}
+                        </div>
                       </div>
                       <CardContent className='p-0'>
                         {screenImages[screen.id] ? (
                           <div className='relative'>
-                            <img
+                            <Image
                               src={
-                                screenImages[screen.id] || '/placeholder.jpg'
+                                screenImages[screen.id] || '/placeholder.svg'
                               }
                               alt={`Image for ${screen.title}`}
                               className='h-auto w-full'
+                              width={500} // Adjust width as needed
+                              height={500} // Adjust height as needed
+                              layout='responsive'
                             />
                             <div className='absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity hover:opacity-100'>
                               <Button
                                 variant='secondary'
                                 size='sm'
                                 className='mr-2'
+                                onClick={() => handleEditImage(screen.id)}
+                              >
+                                <Edit className='mr-1 h-4 w-4' />
+                                Edit
+                              </Button>
+                              <Button
+                                variant='secondary'
+                                size='sm'
                                 onClick={() => handleRegenerateImage(screen.id)}
                                 disabled={isRegenerating === screen.id}
                               >
@@ -405,7 +459,7 @@ export default function ImageVideoGenerator({
                       </CardContent>
                       <div className='border-t p-3'>
                         <p className='text-sm text-muted-foreground'>
-                          {screen.content}
+                          {screen.narration}
                         </p>
                       </div>
                     </Card>
@@ -464,16 +518,29 @@ export default function ImageVideoGenerator({
                                 <RefreshCw className='h-4 w-4' />
                               )}
                             </Button>
+                            <Button
+                              variant='ghost'
+                              size='sm'
+                              onClick={e => {
+                                e.stopPropagation()
+                                handleDownloadImage(screen.id)
+                              }}
+                            >
+                              <Download className='h-4 w-4' />
+                            </Button>
                           </>
                         )}
                       </div>
                     </div>
                     <CardContent className='p-0'>
                       {screenImages[screen.id] ? (
-                        <img
-                          src={screenImages[screen.id] || '/placeholder.jpg'}
+                        <Image
+                          src={screenImages[screen.id] || '/placeholder.svg'}
                           alt={`Image for ${screen.title}`}
                           className='h-auto w-full'
+                          width={500} // Adjust width as needed
+                          height={500} // Adjust height as needed
+                          layout='responsive'
                         />
                       ) : (
                         <div className='flex h-48 items-center justify-center bg-muted'>
@@ -544,16 +611,19 @@ export default function ImageVideoGenerator({
                 </div>
 
                 <div className='overflow-hidden rounded-md border'>
-                  <img
+                  <Image
                     src={
-                      screenImages[currentEditingScreen] || '/placeholder.jpg'
+                      screenImages[currentEditingScreen] || '/placeholder.svg'
                     }
                     alt={`Editing ${scriptScreens.find(s => s.id === currentEditingScreen)?.title}`}
                     className='h-auto w-full'
+                    width={500} // Adjust width as needed
+                    height={500} // Adjust height as needed
                     style={{
                       transform: `scale(${imageScale[0] / 100})`,
                       filter: `brightness(${brightness[0]}%) contrast(${contrast[0]}%) saturate(${saturation[0]}%)`
                     }}
+                    layout='responsive'
                   />
                 </div>
 
@@ -702,10 +772,13 @@ export default function ImageVideoGenerator({
                     <div className='truncate bg-muted/30 p-2 text-sm font-medium'>
                       {screen.title}
                     </div>
-                    <img
-                      src={screenImages[screen.id] || '/placeholder.jpg'}
+                    <Image
+                      src={screenImages[screen.id] || '/placeholder.svg'}
                       alt={`Image for ${screen.title}`}
                       className='h-auto w-full'
+                      width={500} // Adjust width as needed
+                      height={500} // Adjust height as needed
+                      layout='responsive'
                     />
                   </div>
                 ))}
@@ -789,7 +862,7 @@ export default function ImageVideoGenerator({
                     <RefreshCw className='mr-2 h-4 w-4' />
                     Edit Images
                   </Button>
-                  <Button>Continue to Video Editor</Button>
+                  <Button>Download Video</Button>
                 </div>
               </div>
             )}
