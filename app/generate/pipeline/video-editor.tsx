@@ -1,13 +1,131 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Slider } from '@/components/ui/slider'
-import { Check, Music, Plus, Subtitles, Video } from 'lucide-react'
+import {
+  Check,
+  Music,
+  Subtitles,
+  Video,
+  Trash2,
+  GripVertical,
+  Play,
+  Pause,
+  ChevronDown,
+  ChevronUp
+} from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select'
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
+import { useGenerationStore } from '@/store/useGenerationStore'
+
+// Mock data for images and audio files
+const MOCK_MEDIA_ITEMS = [
+  {
+    id: 'item-1',
+    title: 'Introduction',
+    image: '/placeholder.jpg?height=200&width=350&text=Introduction',
+    audio: '/mock-audio-1.mp3',
+    duration: 15
+  },
+  {
+    id: 'item-2',
+    title: 'Historical Context',
+    image: '/placeholder.jpg?height=200&width=350&text=Historical+Context',
+    audio: '/mock-audio-2.mp3',
+    duration: 22
+  },
+  {
+    id: 'item-3',
+    title: 'Current Applications',
+    image: '/placeholder.jpg?height=200&width=350&text=Current+Applications',
+    audio: '/mock-audio-3.mp3',
+    duration: 18
+  },
+  {
+    id: 'item-4',
+    title: 'Future Possibilities',
+    image: '/placeholder.jpg?height=200&width=350&text=Future+Possibilities',
+    audio: '/mock-audio-4.mp3',
+    duration: 20
+  },
+  {
+    id: 'item-5',
+    title: 'Ethical Considerations',
+    image: '/placeholder.jpg?height=200&width=350&text=Ethical+Considerations',
+    audio: '/mock-audio-5.mp3',
+    duration: 25
+  },
+  {
+    id: 'item-6',
+    title: 'Conclusion',
+    image: '/placeholder.jpg?height=200&width=350&text=Conclusion',
+    audio: '/mock-audio-6.mp3',
+    duration: 12
+  },
+  {
+    id: 'item-7',
+    title: 'Introduction',
+    image: '/placeholder.jpg?height=200&width=350&text=Introduction',
+    audio: '/mock-audio-1.mp3',
+    duration: 15
+  },
+  {
+    id: 'item-8',
+    title: 'Historical Context',
+    image: '/placeholder.jpg?height=200&width=350&text=Historical+Context',
+    audio: '/mock-audio-2.mp3',
+    duration: 22
+  },
+  {
+    id: 'item-9',
+    title: 'Current Applications',
+    image: '/placeholder.jpg?height=200&width=350&text=Current+Applications',
+    audio: '/mock-audio-3.mp3',
+    duration: 18
+  },
+  {
+    id: 'item-10',
+    title: 'Future Possibilities',
+    image: '/placeholder.jpg?height=200&width=350&text=Future+Possibilities',
+    audio: '/mock-audio-4.mp3',
+    duration: 20
+  },
+  {
+    id: 'item-11',
+    title: 'Ethical Considerations',
+    image: '/placeholder.jpg?height=200&width=350&text=Ethical+Considerations',
+    audio: '/mock-audio-5.mp3',
+    duration: 25
+  },
+  {
+    id: 'item-12',
+    title: 'Conclusion',
+    image: '/placeholder.jpg?height=200&width=350&text=Conclusion',
+    audio: '/mock-audio-6.mp3',
+    duration: 12
+  }
+]
+
+// Transition options
+const TRANSITIONS = [
+  { id: 'none', name: 'None' },
+  { id: 'fade', name: 'Fade' },
+  { id: 'slide', name: 'Slide' },
+  { id: 'zoom', name: 'Zoom' },
+  { id: 'wipe', name: 'Wipe' },
+  { id: 'dissolve', name: 'Dissolve' }
+]
 
 export default function VideoEditor({
   onComplete
@@ -20,6 +138,30 @@ export default function VideoEditor({
   const [musicVolume, setMusicVolume] = useState([70])
   const [isPreviewReady, setIsPreviewReady] = useState(false)
   const [isEditorComplete, setIsEditorComplete] = useState(false)
+  const { story, images } = useGenerationStore()
+
+  console.log('Images:', images)
+  console.log('Story:', story)
+
+  // Timeline items state
+  const [videoItems, setVideoItems] = useState(MOCK_MEDIA_ITEMS)
+  // const [timelineItems, setTimelineItems] = useState<any[]>([])
+  // const [transitions, setTransitions] = useState<{ [key: string]: string }>({})
+
+  // Add a playhead indicator that shows current playback position
+  // Add this state near the other state declarations:
+  const [playbackPosition, setPlaybackPosition] = useState(0)
+  const [isPlaying, setIsPlaying] = useState(false)
+
+  // Audio playback state
+  const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+
+  // Calculate total duration
+  const totalDuration = videoItems.reduce(
+    (total, item) => total + item.duration,
+    0
+  )
 
   // Update completion status when editor is complete
   useEffect(() => {
@@ -28,20 +170,93 @@ export default function VideoEditor({
     }
   }, [isEditorComplete, onComplete])
 
+  // Add this function to handle playback simulation:
+
+  // Simulate playback with moving playhead
+  const simulatePlayback = () => {
+    // if (timelineItems.length === 0) return
+    if (videoItems.length === 0) return
+    setIsPlaying(true)
+    setPlaybackPosition(0)
+
+    // Simulate playback by moving the playhead
+    const interval = setInterval(() => {
+      setPlaybackPosition(prev => {
+        if (prev >= totalDuration) {
+          clearInterval(interval)
+          setIsPlaying(false)
+          return 0
+        }
+        return prev + 0.1 // Increment by 100ms
+      })
+    }, 100)
+
+    // Store interval ID for cleanup
+    return () => clearInterval(interval)
+  }
+
+  // Update the preview button in the preview tab to use the simulation:
+  // Find the handlePreview function and replace it with:
   const handlePreview = () => {
     setIsPreviewReady(true)
+    const cleanup = simulatePlayback()
+
+    // Clean up the interval when preview is done
+    setTimeout(() => {
+      if (cleanup) cleanup()
+    }, totalDuration * 1000)
   }
 
   const handleComplete = () => {
     setIsEditorComplete(true)
   }
 
+  const handleDragEnd = (result: any) => {
+    if (!result.destination) return
+
+    const { source, destination } = result
+
+    setVideoItems(prev => {
+      const newItems = [...prev]
+      const [movedItem] = newItems.splice(source.index, 1)
+      newItems.splice(destination.index, 0, movedItem)
+      return newItems
+    })
+  }
+
+  // Handle audio playback
+  const handlePlayAudio = (itemId: string, audioSrc: string) => {
+    if (currentlyPlaying === itemId) {
+      // Stop playing
+      if (audioRef.current) {
+        audioRef.current.pause()
+      }
+      setCurrentlyPlaying(null)
+    } else {
+      // Start playing
+      if (audioRef.current) {
+        audioRef.current.src = audioSrc
+        audioRef.current.play()
+      }
+      setCurrentlyPlaying(itemId)
+    }
+  }
+
+  // Handle audio ended
+  const handleAudioEnded = () => {
+    setCurrentlyPlaying(null)
+  }
+
   return (
     <div>
       <h2 className='mb-4 text-2xl font-bold'>Advanced Video Editor</h2>
       <p className='mb-6 text-muted-foreground'>
-        Edit your video, add effects, music, and subtitles before publishing.
+        Arrange your images and audio, add transitions, and customize your video
+        before publishing.
       </p>
+
+      {/* Hidden audio element for playback */}
+      <audio ref={audioRef} onEnded={handleAudioEnded} className='hidden' />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className='w-full'>
         <TabsList className='mb-6 grid w-full grid-cols-3'>
@@ -52,97 +267,90 @@ export default function VideoEditor({
 
         <TabsContent value='timeline'>
           <div className='space-y-6'>
-            <div className='rounded-md border p-4'>
-              <Label className='mb-2 block'>Video Timeline</Label>
-              <div className='relative h-24 rounded-md bg-muted'>
-                {/* Timeline clips */}
-                <div className='absolute left-2 right-2 top-2 flex h-12 space-x-1'>
-                  <div className='flex h-full w-1/4 items-center justify-center rounded-sm bg-primary/80 text-xs text-primary-foreground'>
-                    Intro
-                  </div>
-                  <div className='flex h-full w-2/5 items-center justify-center rounded-sm bg-primary/60 text-xs text-primary-foreground'>
-                    Main Content
-                  </div>
-                  <div className='flex h-full w-1/5 items-center justify-center rounded-sm bg-primary/40 text-xs text-primary-foreground'>
-                    Visuals
-                  </div>
-                  <div className='flex h-full w-1/6 items-center justify-center rounded-sm bg-primary/80 text-xs text-primary-foreground'>
-                    Outro
-                  </div>
-                </div>
-
-                {/* Timeline ruler */}
-                <div className='absolute bottom-2 left-2 right-2 flex h-4'>
-                  {Array.from({ length: 10 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className='h-full flex-1 border-l border-muted-foreground/30'
-                    >
-                      <div className='text-[10px] text-muted-foreground'>
-                        {i * 30}s
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
-              <Card>
-                <CardContent className='p-4'>
-                  <div className='mb-2 flex items-center justify-between'>
-                    <Label>Available Clips</Label>
-                    <Button variant='outline' size='sm'>
-                      <Plus className='mr-1 h-4 w-4' /> Add Clip
-                    </Button>
-                  </div>
-                  <div className='max-h-40 space-y-2 overflow-y-auto'>
-                    {[
-                      'Intro Sequence',
-                      'Main Content',
-                      'Visual Segment',
-                      'Conclusion'
-                    ].map((clip, index) => (
+            {/* Available Media Items Panel */}
+            <Card>
+              <CardContent className='p-4'>
+                <Label className='mb-4 block text-base font-medium'>
+                  Available Media
+                </Label>
+                <DragDropContext onDragEnd={handleDragEnd}>
+                  <Droppable
+                    droppableId='available-items'
+                    direction='horizontal'
+                  >
+                    {provided => (
                       <div
-                        key={index}
-                        className='flex items-center justify-between rounded-md bg-muted/50 p-2'
+                        className='flex gap-3 overflow-x-auto pb-4'
+                        {...provided.droppableProps}
+                        ref={provided.innerRef}
                       >
-                        <div className='flex items-center'>
-                          <Video className='mr-2 h-4 w-4 text-muted-foreground' />
-                          <span className='text-sm'>{clip}</span>
-                        </div>
-                        <Button variant='ghost' size='sm'>
-                          Add
-                        </Button>
+                        {videoItems.length === 0 ? (
+                          <div className='w-full py-8 text-center text-muted-foreground'>
+                            <p>All items have been added to the timeline</p>
+                          </div>
+                        ) : (
+                          videoItems.map((item, index) => (
+                            <Draggable
+                              key={item.id}
+                              draggableId={item.id}
+                              index={index}
+                            >
+                              {provided => (
+                                <div
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  {...provided.dragHandleProps}
+                                  className='w-[300px] flex-shrink-0 overflow-hidden rounded-md border bg-card transition-shadow hover:shadow-md'
+                                >
+                                  <div className='flex items-center justify-between bg-muted/30 p-2'>
+                                    <div className='flex items-center'>
+                                      <GripVertical className='mr-2 h-4 w-4 text-muted-foreground' />
+                                      <span className='truncate text-sm font-medium'>
+                                        {item.title}
+                                      </span>
+                                    </div>
+                                    <div className='flex items-center space-x-1'>
+                                      <Button
+                                        variant='ghost'
+                                        size='icon'
+                                        className='h-7 w-7'
+                                        onClick={() =>
+                                          handlePlayAudio(item.id, item.audio)
+                                        }
+                                      >
+                                        {currentlyPlaying === item.id ? (
+                                          <Pause className='h-3 w-3' />
+                                        ) : (
+                                          <Play className='h-3 w-3' />
+                                        )}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                  <div className='relative'>
+                                    <img
+                                      src={item.image || '/placeholder.svg'}
+                                      alt={item.title}
+                                      className='h-auto w-full'
+                                    />
+                                    <div className='absolute bottom-0 right-0 rounded-tl-md bg-black/70 px-2 py-1 text-xs text-white'>
+                                      {Math.floor(item.duration / 60)}:
+                                      {(item.duration % 60)
+                                        .toString()
+                                        .padStart(2, '0')}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </Draggable>
+                          ))
+                        )}
+                        {provided.placeholder}
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className='p-4'>
-                  <div className='mb-2 flex items-center justify-between'>
-                    <Label>Transitions</Label>
-                  </div>
-                  <div className='max-h-40 space-y-2 overflow-y-auto'>
-                    {['Fade', 'Dissolve', 'Wipe', 'Slide', 'Zoom'].map(
-                      (transition, index) => (
-                        <div
-                          key={index}
-                          className='flex items-center justify-between rounded-md bg-muted/50 p-2'
-                        >
-                          <span className='text-sm'>{transition}</span>
-                          <Button variant='ghost' size='sm'>
-                            Apply
-                          </Button>
-                        </div>
-                      )
                     )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                  </Droppable>
+                </DragDropContext>
+              </CardContent>
+            </Card>
 
             <Button onClick={() => setActiveTab('effects')} className='w-full'>
               Continue to Effects & Audio
@@ -339,7 +547,8 @@ export default function VideoEditor({
                       <div className='h-1 w-1/3 rounded-full bg-primary'></div>
                     </div>
                     <span className='text-xs text-muted-foreground'>
-                      01:23 / 04:56
+                      00:00 / {Math.floor(totalDuration / 60)}:
+                      {(totalDuration % 60).toString().padStart(2, '0')}
                     </span>
                   </div>
                   <div className='flex items-center space-x-2'>

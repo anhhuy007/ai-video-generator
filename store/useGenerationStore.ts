@@ -1,3 +1,4 @@
+import { signIn } from 'next-auth/react'
 import { Story } from '@/app/utils/type'
 import { create } from 'zustand'
 
@@ -7,6 +8,9 @@ type GenerationStore = {
 
   images: string[]
   setImages: (images: string[]) => void
+
+  mp3_url: string[]
+  setMp3Url: (mp3_url: string[]) => void
 }
 
 export const useGenerationStore = create<GenerationStore>(set => ({
@@ -20,5 +24,8 @@ export const useGenerationStore = create<GenerationStore>(set => ({
   setStory: story => set({ story }),
 
   images: [],
-  setImages: images => set({ images })
+  setImages: images => set({ images }),
+
+  mp3_url: [],
+  setMp3Url: mp3_url => set({ mp3_url })
 }))
