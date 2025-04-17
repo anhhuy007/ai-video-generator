@@ -110,8 +110,9 @@ export default function ImageVideoGenerator({
 
   // Update completion status when all screens have images and video is created
   useEffect(() => {
-    if (imageCreated) {
+    if (imageCreated) {      
       setImages(Object.values(screenImages))
+
       onComplete()
     }
   }, [imageCreated, onComplete])

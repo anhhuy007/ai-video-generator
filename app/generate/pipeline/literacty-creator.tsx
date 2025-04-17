@@ -71,6 +71,7 @@ export default function LiteraryCreator({
 
   const { setStory } = useGenerationStore()
 
+
   // Update completion status when script is approved
   useEffect(() => {
     if (isScriptApproved) {

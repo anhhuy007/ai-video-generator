@@ -29,6 +29,13 @@ export default function HomePage() {
         >
           Upload Video
         </Link>
+
+        <Link
+          href='/uploadAudio'
+          className='rounded bg-orange-500 px-6 py-4 text-center font-bold text-white hover:bg-orange-700'
+        >
+          Upload Âm Thanh
+        </Link>
       </div>
     </div>
   )

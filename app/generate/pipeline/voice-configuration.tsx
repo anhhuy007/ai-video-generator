@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Check, Play, Info } from 'lucide-react'
+import { useGenerationStore } from '@/store/useGenerationStore';
 import {
   Select,
   SelectContent,
@@ -65,6 +66,9 @@ export default function VoiceConfiguration({
   const [isPlaying, setIsPlaying] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isConfigurationComplete, setIsConfigurationComplete] = useState(false)
+  const [uploadedUrl, setUploadedUrl] = useState('')
+  const [isUploading, setIsUploading] = useState(false)
+  const { story, setAudioUrl } = useGenerationStore(); // Lấy story từ store và thêm setAudioUrl
 
   // Fetch voices from ElevenLabs API
   useEffect(() => {
@@ -138,32 +142,87 @@ export default function VoiceConfiguration({
     }
   }
 
-  // useEffect(() => {
-  //   if (provider === 'elevenlabs') {
-  //     setVoice('Rachel')
-  //   } else if (provider === 'google') {
-  //     setVoice('Standard')
-  //   } else if (provider === 'amazon') {
-  //     setVoice('Joanna')
-  //   }
-  // }, [provider])
-
-  const handleComplete = () => {
-    if (!selectedVoiceId) return
-
-    // Save the configuration
-    const configuration = {
-      voiceId: selectedVoiceId,
-      voiceName: getSelectedVoiceName(),
-      speed: Number.parseFloat(speed),
-      stability: Number.parseFloat(stability),
-      style: Number.parseFloat(style)
+  // Upload audio file to Cloudinary
+  const uploadAudioToCloudinary = async (audioBlob: Blob) => {
+    setIsUploading(true)
+    try {
+      // Tạo file từ blob để upload
+      const file = new File([audioBlob], 'narration.mp4', { type: 'audio/mp4' })
+      
+      // Tạo FormData để gửi file
+      const formData = new FormData()
+      formData.append('file', file)
+      
+      // Gọi API upload
+      const response = await axios.post('/api/upload', formData)
+      
+      // Lấy URL từ response
+      const uploadedFileUrl = response.data.url
+      setUploadedUrl(uploadedFileUrl)
+      
+      // Cập nhật URL vào store (nếu có hàm này trong store)
+      if (setAudioUrl) {
+        setAudioUrl(uploadedFileUrl)
+      }
+      
+      console.log('Uploaded successfully:', uploadedFileUrl)
+      return uploadedFileUrl
+    } catch (error) {
+      console.error('Error uploading audio:', error)
+      throw error
+    } finally {
+      setIsUploading(false)
     }
-
-    console.log('Voice configuration saved:', configuration)
-    setIsConfigurationComplete(true)
   }
 
+  const handleComplete = async () => {
+    if (!selectedVoiceId || !story) {
+      console.error('No story or voice selected.');
+      return;
+    }
+  
+    // Trích xuất script từ story
+    const script = story.scenes
+      ?.map(scene => `# ${scene.title}\n${scene.narration}`)
+      .join('\n\n');
+  
+    const configuration = {
+      text: script, // Sử dụng script từ story
+      voice: getSelectedVoiceName(),
+      speed: Number.parseFloat(speed),
+      stability: Number.parseFloat(stability),
+      style: Number.parseFloat(style),
+    };
+  
+    try {
+      const response = await axios.post(
+        '/api/generation/voice',
+        configuration,
+        {
+          responseType: 'blob',
+        }
+      );
+  
+      const audioBlob = response.data;
+      const url = URL.createObjectURL(audioBlob);
+      const audio = new Audio(url);
+  
+      audio.onended = () => {
+        setIsPlaying(false);
+        URL.revokeObjectURL(url);
+      };
+
+      // Upload file lên Cloudinary
+      await uploadAudioToCloudinary(audioBlob);
+  
+      audio.play();
+  
+      setIsConfigurationComplete(true);
+    } catch (error) {
+      console.error('Error applying voice configuration:', error);
+    }
+  };
+  
   return (
     <div>
       <h2 className='mb-4 text-xl font-medium'>Voice Configuration</h2>
@@ -313,9 +372,14 @@ export default function VoiceConfiguration({
             <Button
               className='flex-1'
               onClick={handleComplete}
-              disabled={isConfigurationComplete || !selectedVoiceId}
+              disabled={isConfigurationComplete || !selectedVoiceId || isUploading}
             >
-              {isConfigurationComplete ? (
+              {isUploading ? (
+                <span className='flex items-center'>
+                  <span className='mr-2 animate-spin'>◯</span>
+                  Uploading...
+                </span>
+              ) : isConfigurationComplete ? (
                 <>
                   <Check className='mr-2 h-4 w-4' />
                   Applied
@@ -325,6 +389,13 @@ export default function VoiceConfiguration({
               )}
             </Button>
           </div>
+          
+          {uploadedUrl && (
+            <div className='mt-4 p-3 bg-slate-50 rounded-md'>
+              <p className='text-sm font-medium'>Đã tải lên thành công!</p>
+              <p className='text-xs text-muted-foreground break-all'>{uploadedUrl}</p>
+            </div>
+          )}
         </div>
       )}
     </div>

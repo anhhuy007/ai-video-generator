@@ -1,5 +1,5 @@
 import { ElevenLabsClient } from "elevenlabs";
 
 export const elevenlabs = new ElevenLabsClient({
-  apiKey: 'sk_26753101fbfffee1285c2ea989c0febcf75d073c878c5c7c'
+  apiKey: 'sk_d2b9ae409cb8fdf33591e064081ab9ac541718df47f4c577'
 });

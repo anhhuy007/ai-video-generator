@@ -46,13 +46,13 @@ export function DashboardHeader({ session, onSignOut }: DashboardHeaderProps) {
               variant='ghost'
               className='relative h-8 w-8 rounded-full p-0'
             >
-              {/* <Image
-                // src={session.user.image || ''}
+              <Image
+                src={session.user.image || ''}
                 alt='User Avatar'
                 className='h-8 w-8 rounded-full'
                 width={30}
                 height={30}
-              /> */}
+              />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className='w-56' align='end' forceMount>
