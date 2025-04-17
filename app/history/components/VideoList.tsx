@@ -1,6 +1,7 @@
 // app/history/components/VideoList.tsx
 'use client'
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 
 interface GenHistory {
   id: string
@@ -18,23 +19,28 @@ interface GalleryEntry {
   created_at: string
 }
 
-export default function VideoList({ userId }: { userId: string }) {
+export default function VideoList() {
+  const { data: session } = useSession()
   const [genHistories, setGenHistories] = useState<GenHistory[]>([])
   const [galleryEntries, setGalleryEntries] = useState<{
     [key: string]: GalleryEntry
   }>({})
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string>('')
+  const [userId, setUserId] = useState<string>('')
 
   useEffect(() => {
     const fetchHistories = async () => {
       setLoading(true)
       setError('')
       try {
-        // Fetch gen histories - Use query parameter instead of body
-        const response = await fetch(
-          `/api/gen_history?userId=${encodeURIComponent(userId)}`
-        )
+        // Lấy thông tin user ID từ session
+        if (session?.user?.id) {
+          setUserId(session.user.id)
+          console.log('User ID đang xem lịch sử:', session.user.id)
+        }
+
+        const response = await fetch('/api/gen_history')
 
         if (!response.ok) {
           const data = await response.json()
@@ -44,7 +50,6 @@ export default function VideoList({ userId }: { userId: string }) {
         const data = await response.json()
         setGenHistories(data.historyEntries || [])
 
-        // Fetch gallery entries for each history with gallery_id
         const entriesWithGalleryId = (data.historyEntries || []).filter(
           (history: GenHistory) => history.gallery_id
         )
@@ -82,7 +87,7 @@ export default function VideoList({ userId }: { userId: string }) {
     }
 
     fetchHistories()
-  }, [userId])
+  }, [session])
 
   if (loading) {
     return <div className='py-6 text-center'>Đang tải dữ liệu...</div>
@@ -96,64 +101,69 @@ export default function VideoList({ userId }: { userId: string }) {
     )
   }
 
-  if (genHistories.length === 0) {
-    return (
-      <div className='py-6 text-center'>
-        Không tìm thấy lịch sử video nào cho User ID này.
-      </div>
-    )
-  }
-
   return (
     <div>
+      {/* Hiển thị User ID */}
+      <div className='mb-4 rounded-md border border-blue-200 bg-blue-50 p-3'>
+        <p className='font-semibold'>
+          User ID đang xem: <span className='text-blue-600'>{userId}</span>
+        </p>
+      </div>
+
       <h2 className='mb-4 text-xl font-semibold'>
         Lịch sử video ({genHistories.length})
       </h2>
 
-      <div className='grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3'>
-        {genHistories.map(history => {
-          const galleryEntry = history.gallery_id
-            ? galleryEntries[history.gallery_id]
-            : null
+      {genHistories.length === 0 ? (
+        <div className='py-6 text-center'>
+          Không tìm thấy lịch sử video nào cho tài khoản này.
+        </div>
+      ) : (
+        <div className='grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3'>
+          {genHistories.map(history => {
+            const galleryEntry = history.gallery_id
+              ? galleryEntries[history.gallery_id]
+              : null
 
-          return (
-            <div
-              key={history.id}
-              className='overflow-hidden rounded-lg bg-white shadow-md'
-            >
-              {galleryEntry && (
-                <div className='aspect-video'>
-                  <video
-                    src={galleryEntry.video_url}
-                    controls
-                    className='h-full w-full object-cover'
-                  />
-                </div>
-              )}
+            return (
+              <div
+                key={history.id}
+                className='overflow-hidden rounded-lg bg-white shadow-md'
+              >
+                {galleryEntry && (
+                  <div className='aspect-video'>
+                    <video
+                      src={galleryEntry.video_url}
+                      controls
+                      className='h-full w-full object-cover'
+                    />
+                  </div>
+                )}
 
-              <div className='p-4'>
-                <h3 className='mb-2 text-lg font-bold'>
-                  {galleryEntry ? galleryEntry.title : 'Video chưa được tạo'}
-                </h3>
+                <div className='p-4'>
+                  <h3 className='mb-2 text-lg font-bold'>
+                    {galleryEntry ? galleryEntry.title : 'Video chưa được tạo'}
+                  </h3>
 
-                <div className='mb-2 text-sm text-gray-600'>
-                  <p>
-                    Ngày tạo:{' '}
-                    {new Date(history.created_at).toLocaleDateString('vi-VN')}
-                  </p>
-                </div>
+                  <div className='mb-2 text-sm text-gray-600'>
+                    <p>
+                      Ngày tạo:{' '}
+                      {new Date(history.created_at).toLocaleDateString('vi-VN')}
+                    </p>
+                  </div>
 
-                <div className='mt-3'>
-                  <p className='text-sm text-gray-700'>
-                    <span className='font-semibold'>Prompt:</span>{' '}
-                    {history.prompt}
-                  </p>
+                  <div className='mt-3'>
+                    <p className='text-sm text-gray-700'>
+                      <span className='font-semibold'>Prompt:</span>{' '}
+                      {history.prompt}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          )
-        })}
-      </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

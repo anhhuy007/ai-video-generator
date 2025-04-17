@@ -3,7 +3,7 @@ import { v2 as cloudinary } from 'cloudinary'
 import { writeFile, unlink } from 'fs/promises'
 import path from 'path'
 import os from 'os'
-// app/api/upload/image/route.ts
+
 // Cấu hình Cloudinary
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,

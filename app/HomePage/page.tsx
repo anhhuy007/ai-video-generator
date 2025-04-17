@@ -36,6 +36,13 @@ export default function HomePage() {
         >
           Upload Âm Thanh
         </Link>
+
+        <Link
+          href='/uploadImage'
+          className='rounded bg-yellow-500 px-6 py-4 text-center font-bold text-white hover:bg-orange-700'
+        >
+          Upload Ảnh
+        </Link>
       </div>
     </div>
   )
