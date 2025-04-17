@@ -2,7 +2,7 @@ import NextAuth, { NextAuthOptions } from 'next-auth'
 import GoogleProvider from 'next-auth/providers/google'
 import { Session, User, DefaultSession } from 'next-auth'
 import { JWT } from 'next-auth/jwt'
-
+// app/api/auth/[...nextauth]/route.ts
 declare module 'next-auth' {
   interface Session extends DefaultSession {
     user: {

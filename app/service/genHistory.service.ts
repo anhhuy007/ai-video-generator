@@ -15,11 +15,13 @@ export async function createGenHistory(
   return result[0]
 }
 
-export async function getGenHistoryForUser(userId: string) {
+export async function getGenHistoryForUser(googleId: string) {
   const result = await sql`
-    SELECT * FROM gen_history
-    WHERE user_id = ${userId}
-    ORDER BY created_at DESC;
+    SELECT gh.*
+    FROM gen_history gh
+    JOIN users u ON gh.user_id = u.id
+    WHERE u.google_id = ${googleId}
+    ORDER BY gh.created_at DESC;
   `
   return result
 }
