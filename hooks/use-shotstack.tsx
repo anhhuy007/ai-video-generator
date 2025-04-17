@@ -1,14 +1,7 @@
 // hooks/useShotstackRender.ts
 import { useState, useEffect } from 'react'
 import axios from 'axios'
-
-interface MediaItem {
-  id: string
-  title: string
-  image: string
-  audio: string
-  duration: number
-}
+import { Effect, MediaItem } from '@/app/utils/type'
 
 interface ShotstackRenderOptions {
   apiKey?: string
@@ -18,6 +11,7 @@ interface ShotstackRenderOptions {
 
 export default function useShotstackRender(
   mediaItems: MediaItem[],
+  effect: Effect,
   options: ShotstackRenderOptions = {}
 ) {
   const [isRendering, setIsRendering] = useState(false)
@@ -41,7 +35,11 @@ export default function useShotstackRender(
         clips: items.map(item => ({
           asset: {
             type: 'image',
-            src: item.image
+            src: item.image,
+            transition: {
+              in: item.transitionIn,
+              out: item.transitionOut
+            }
           },
           start: 0,
           length: item.duration
@@ -71,7 +69,6 @@ export default function useShotstackRender(
       }
     ]
 
-    // Cập nhật thời gian bắt đầu cho từng clip
     let currentTime = 0
     for (let i = 0; i < items.length; i++) {
       tracks.forEach(track => {

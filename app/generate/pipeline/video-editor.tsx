@@ -38,17 +38,7 @@ import {
 } from '@/components/ui/select'
 import useShotstackRender from '@/hooks/use-shotstack'
 import { string } from 'zod'
-
-// Mock data for images and audio files
-interface MediaItem {
-  id: string
-  title: string
-  image: string
-  audio: string
-  duration: number
-  transitionIn: string
-  transitionOut: string
-}
+import { MediaItem, Effect } from '@/app/utils/type'
 
 // Format time in MM:SS format
 const formatTime = (seconds: number) => {
@@ -86,8 +76,46 @@ const TRANSITION_EFFECTS = [
   { value: 'reveal', label: 'Reveal' }
 ]
 
-// Transition options
+// Subtitle styles
+const SUBTITLE_STYLES = [
+  { key: 'Standard', value: 'standard' },
+  { key: 'Minimal', value: 'minimal' },
+  { key: 'Bold', value: 'bold' }
+]
 
+// Subtitle positions
+const SUBTITLE_POSITIONS = [
+  { key: 'Top', value: 'top' },
+  { key: 'Bottom', value: 'bottom' },
+  { key: 'Floating', value: 'floating' }
+]
+
+const MUSIC_STYLES = [
+  {
+    key: 'Upbeat',
+    value: 'upbeat',
+    mp3_url:
+      'https://res.cloudinary.com/dprxfw51q/video/upload/v1744903851/video_gen_ai/v1y5pg3wdjstf5vhgw7x.mp4'
+  },
+  {
+    key: 'Relaxing',
+    value: 'relaxing',
+    mp3_url:
+      'https://res.cloudinary.com/dprxfw51q/video/upload/v1744904125/video_gen_ai/kxcrij8plog8sypg2scu.mp4'
+  },
+  {
+    key: 'Dramatic',
+    value: 'dramatic',
+    mp3_url:
+      'https://res.cloudinary.com/dprxfw51q/video/upload/v1744904130/video_gen_ai/yup62s3kjrvn8c5umnoi.mp4'
+  },
+  {
+    key: 'Corporate',
+    value: 'corporate',
+    mp3_url:
+      'https://res.cloudinary.com/dprxfw51q/video/upload/v1744904312/video_gen_ai/zjgb91wkqeqnqtpcyuqq.mp4'
+  }
+]
 export default function VideoEditor({
   onComplete
 }: {
@@ -103,14 +131,28 @@ export default function VideoEditor({
   const [media_items, setMediaItems] = useState<MediaItem[]>([])
 
   // Effect and audio settings
-  const [subtitleStyle, setSubtitleStyle] = useState('standard')
-  const [subtitlePosition, setSubtitlePosition] = useState('bottom')
-  const [musicStyle, setMusicStyle] = useState('upbeat')
+  // const [subtitleStyle, setSubtitleStyle] = useState('standard')
+  // const [subtitlePosition, setSubtitlePosition] = useState('bottom')
+  // const [musicStyle, setMusicStyle] = useState('upbeat')
+  const [effect, setEffect] = useState<Effect>({
+    subtitleStyle: 'standard',
+    subtitlePosition: 'bottom',
+    musicStyle: 'upbeat'
+  })
+
   const [selectedEffects, setSelectedEffects] = useState<string[]>([])
+
+  const updateEffect = (key: keyof Effect, value: string) => {
+    setEffect(prev => ({
+      ...prev,
+      [key]: value
+    }))
+  }
 
   // Render
   const { startRender, isRendering, renderData } = useShotstackRender(
     media_items,
+    effect,
     {
       apiKey: process.env.NEXT_PUBLIC_SHOTSTACK_API_KEY_SANDBOX,
       apiUrl: process.env.NEXT_PUBLIC_SHOTSTACK_API_URL_SANDBOX
@@ -122,6 +164,10 @@ export default function VideoEditor({
       console.log('Video đã render xong:', renderData)
     }
   }, [renderData])
+
+  useEffect(() => {
+    console.log('Effect change to: ', effect)
+  }, [effect])
 
   const toggleEffect = (effect: string) => {
     setSelectedEffects(prev =>
@@ -437,6 +483,7 @@ export default function VideoEditor({
                 ))}
               </div>
             </div>
+
             <div className='grid grid-cols-1 gap-6 md:grid-cols-2'>
               <div>
                 <Label className='mb-2 block'>Subtitles</Label>
@@ -458,72 +505,45 @@ export default function VideoEditor({
                         <div>
                           <Label className='text-xs'>Subtitle Style</Label>
                           <div className='mt-1 grid grid-cols-3 gap-2'>
-                            <div
-                              className={`cursor-pointer rounded-md border p-2 text-center text-xs ${
-                                subtitleStyle === 'standard'
-                                  ? 'border-primary bg-primary/10'
-                                  : 'hover:bg-muted/50'
-                              }`}
-                              onClick={() => setSubtitleStyle('standard')}
-                            >
-                              Standard
-                            </div>
-                            <div
-                              className={`cursor-pointer rounded-md border p-2 text-center text-xs ${
-                                subtitleStyle === 'minimal'
-                                  ? 'border-primary bg-primary/10'
-                                  : 'hover:bg-muted/50'
-                              }`}
-                              onClick={() => setSubtitleStyle('minimal')}
-                            >
-                              Minimal
-                            </div>
-                            <div
-                              className={`cursor-pointer rounded-md border p-2 text-center text-xs ${
-                                subtitleStyle === 'bold'
-                                  ? 'border-primary bg-primary/10'
-                                  : 'hover:bg-muted/50'
-                              }`}
-                              onClick={() => setSubtitleStyle('bold')}
-                            >
-                              Bold
-                            </div>
+                            {SUBTITLE_STYLES.map(style => (
+                              <div
+                                key={style.value}
+                                className={`cursor-pointer rounded-md border p-2 text-center text-xs ${
+                                  effect.subtitleStyle === style.value
+                                    ? 'border-primary bg-primary/10'
+                                    : 'hover:bg-muted/50'
+                                }`}
+                                onClick={() =>
+                                  updateEffect('subtitleStyle', style.value)
+                                }
+                              >
+                                {style.key}
+                              </div>
+                            ))}
                           </div>
                         </div>
 
                         <div>
                           <Label className='text-xs'>Position</Label>
                           <div className='mt-1 grid grid-cols-3 gap-2'>
-                            <div
-                              className={`cursor-pointer rounded-md border p-2 text-center text-xs ${
-                                subtitlePosition === 'top'
-                                  ? 'border-primary bg-primary/10'
-                                  : 'hover:bg-muted/50'
-                              }`}
-                              onClick={() => setSubtitlePosition('top')}
-                            >
-                              Top
-                            </div>
-                            <div
-                              className={`cursor-pointer rounded-md border p-2 text-center text-xs ${
-                                subtitlePosition === 'bottom'
-                                  ? 'border-primary bg-primary/10'
-                                  : 'hover:bg-muted/50'
-                              }`}
-                              onClick={() => setSubtitlePosition('bottom')}
-                            >
-                              Bottom
-                            </div>
-                            <div
-                              className={`cursor-pointer rounded-md border p-2 text-center text-xs ${
-                                subtitlePosition === 'floating'
-                                  ? 'border-primary bg-primary/10'
-                                  : 'hover:bg-muted/50'
-                              }`}
-                              onClick={() => setSubtitlePosition('floating')}
-                            >
-                              Floating
-                            </div>
+                            {SUBTITLE_POSITIONS.map(position => (
+                              <div
+                                key={position.value}
+                                className={`cursor-pointer rounded-md border p-2 text-center text-xs ${
+                                  effect.subtitlePosition === position.value
+                                    ? 'border-primary bg-primary/10'
+                                    : 'hover:bg-muted/50'
+                                }`}
+                                onClick={() =>
+                                  updateEffect(
+                                    'subtitlePosition',
+                                    position.value
+                                  )
+                                }
+                              >
+                                {position.key}
+                              </div>
+                            ))}
                           </div>
                         </div>
                       </div>
@@ -550,46 +570,21 @@ export default function VideoEditor({
                     {backgroundMusic && (
                       <div className='space-y-4'>
                         <div className='grid grid-cols-2 gap-2'>
-                          <div
-                            className={`cursor-pointer rounded-md border p-2 text-center text-xs ${
-                              musicStyle === 'upbeat'
-                                ? 'border-primary bg-primary/10'
-                                : 'hover:bg-muted/50'
-                            }`}
-                            onClick={() => setMusicStyle('upbeat')}
-                          >
-                            Upbeat
-                          </div>
-                          <div
-                            className={`cursor-pointer rounded-md border p-2 text-center text-xs ${
-                              musicStyle === 'relaxing'
-                                ? 'border-primary bg-primary/10'
-                                : 'hover:bg-muted/50'
-                            }`}
-                            onClick={() => setMusicStyle('relaxing')}
-                          >
-                            Relaxing
-                          </div>
-                          <div
-                            className={`cursor-pointer rounded-md border p-2 text-center text-xs ${
-                              musicStyle === 'dramatic'
-                                ? 'border-primary bg-primary/10'
-                                : 'hover:bg-muted/50'
-                            }`}
-                            onClick={() => setMusicStyle('dramatic')}
-                          >
-                            Dramatic
-                          </div>
-                          <div
-                            className={`cursor-pointer rounded-md border p-2 text-center text-xs ${
-                              musicStyle === 'corporate'
-                                ? 'border-primary bg-primary/10'
-                                : 'hover:bg-muted/50'
-                            }`}
-                            onClick={() => setMusicStyle('corporate')}
-                          >
-                            Corporate
-                          </div>
+                          {MUSIC_STYLES.map(style => (
+                            <div
+                              key={style.value}
+                              className={`cursor-pointer rounded-md border p-2 text-center text-xs ${
+                                effect.musicStyle === style.value
+                                  ? 'border-primary bg-primary/10'
+                                  : 'hover:bg-muted/50'
+                              }`}
+                              onClick={() =>
+                                updateEffect('musicStyle', style.value)
+                              }
+                            >
+                              {style.key}
+                            </div>
+                          ))}
                         </div>
 
                         <div>

@@ -169,52 +169,69 @@ export default function VoiceConfiguration({
     }
   }
 
-  const handleComplete = async () => {
-    if (!selectedVoiceId || !story) {
-      console.error('No story or voice selected.')
-      return
-    }
+  // const handleComplete = async () => {
+  //   if (!selectedVoiceId || !story) {
+  //     console.error('No story or voice selected.')
+  //     return
+  //   }
 
-    // Trích xuất script từ story
-    const script = story.scenes
-      ?.map(scene => `# ${scene.title}\n${scene.narration}`)
-      .join('\n\n')
+  //   // Trích xuất script từ story
+  //   const script = story.scenes
+  //     ?.map(scene => `# ${scene.title}\n${scene.narration}`)
+  //     .join('\n\n')
 
+  //   const configuration = {
+  //     text: script, // Sử dụng script từ story
+  //     voice: getSelectedVoiceName(),
+  //     speed: Number.parseFloat(speed),
+  //     stability: Number.parseFloat(stability),
+  //     style: Number.parseFloat(style)
+  //   }
+
+  //   try {
+  //     const response = await axios.post(
+  //       '/api/generation/voice',
+  //       configuration,
+  //       {
+  //         responseType: 'blob'
+  //       }
+  //     )
+
+  //     const audioBlob = response.data
+  //     const url = URL.createObjectURL(audioBlob)
+  //     const audio = new Audio(url)
+
+  //     audio.onended = () => {
+  //       setIsPlaying(false)
+  //       URL.revokeObjectURL(url)
+  //     }
+
+  //     // Upload file lên Cloudinary
+  //     await uploadAudioToCloudinary(audioBlob)
+
+  //     audio.play()
+
+  //     setIsConfigurationComplete(true)
+  //   } catch (error) {
+  //     console.error('Error applying voice configuration:', error)
+  //   }
+  //   setIsConfigurationComplete
+  // }
+
+  const handleComplete = () => {
+    if (!selectedVoiceId) return
+
+    // Save the configuration
     const configuration = {
-      text: script, // Sử dụng script từ story
-      voice: getSelectedVoiceName(),
+      voiceId: selectedVoiceId,
+      voiceName: getSelectedVoiceName(),
       speed: Number.parseFloat(speed),
       stability: Number.parseFloat(stability),
       style: Number.parseFloat(style)
     }
 
-    try {
-      const response = await axios.post(
-        '/api/generation/voice',
-        configuration,
-        {
-          responseType: 'blob'
-        }
-      )
-
-      const audioBlob = response.data
-      const url = URL.createObjectURL(audioBlob)
-      const audio = new Audio(url)
-
-      audio.onended = () => {
-        setIsPlaying(false)
-        URL.revokeObjectURL(url)
-      }
-
-      // Upload file lên Cloudinary
-      await uploadAudioToCloudinary(audioBlob)
-
-      audio.play()
-
-      setIsConfigurationComplete(true)
-    } catch (error) {
-      console.error('Error applying voice configuration:', error)
-    }
+    console.log('Voice configuration saved:', configuration)
+    setIsConfigurationComplete(true)
   }
 
   return (

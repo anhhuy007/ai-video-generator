@@ -57,6 +57,22 @@ type LLMResponse = {
   }[]
 }
 
+type MediaItem = {
+  id: string
+  title: string
+  image: string
+  audio: string
+  duration: number
+  transitionIn: string
+  transitionOut: string
+}
+
+type Effect = {
+  subtitleStyle: string
+  subtitlePosition: string
+  musicStyle: string
+}
+
 export type {
   User,
   Session,
@@ -66,5 +82,7 @@ export type {
   StoryRequest,
   StoryReponse,
   AIModel,
-  LLMResponse
+  LLMResponse,
+  MediaItem,
+  Effect
 }
