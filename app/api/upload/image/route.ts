@@ -51,6 +51,7 @@ export async function POST(req: Request) {
       format: 'png'
     })
 
+    console.log('Upload response:', uploadResponse)
     return NextResponse.json({ url: uploadResponse.secure_url })
   } catch (error) {
     console.error('Upload error:', error)

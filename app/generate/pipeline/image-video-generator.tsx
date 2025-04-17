@@ -110,13 +110,41 @@ export default function ImageVideoGenerator({
 
   // Update completion status when all screens have images and video is created
   useEffect(() => {
-    if (imageCreated) {      
-      setImages(Object.values(screenImages))
-
-      onComplete()
+    if (imageCreated) {
+      const uploadAllImages = async () => {
+        const base64List = Object.values(screenImages) // list base64
+        const uploadedImageUrls = await uploadImagesToCloudinary(base64List)
+  
+        console.log('Uploaded image URLs:', uploadedImageUrls)
+        setImages(uploadedImageUrls) //  list URL 
+        onComplete()
+      }
+  
+      uploadAllImages()
     }
   }, [imageCreated, onComplete])
+  
+  const uploadImagesToCloudinary = async (base64Images: string[]): Promise<string[]> => {
+    const uploadedUrls: string[] = []
+  
+    for (const base64Image of base64Images) {
+      try {
+        const response = await axios.post('/api/upload/image', {
+          base64Image: base64Image,
+        })
 
+        console.log('Upload response:', response.data)//khong in ra
+        uploadedUrls.push(response.data.url)
+      } catch (error) {
+        console.error('Upload failed for one image:', error)
+        uploadedUrls.push('')
+      }
+    }
+    console.log('Uploaded URLs:', uploadedUrls)
+  
+    return uploadedUrls
+  }
+  
   // Check if all screens have images
   const allScreensHaveImages = () => {
     return (

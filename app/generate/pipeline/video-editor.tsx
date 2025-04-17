@@ -131,6 +131,7 @@ export default function VideoEditor({
 
   useEffect(() => {
     const loadMediaItems = async () => {
+      console.log('Loading media items...', images)
       const audioDurations = await Promise.all(
         mp3_url.map(url => getAudioDuration(url))
       )

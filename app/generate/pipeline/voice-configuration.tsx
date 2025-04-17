@@ -174,49 +174,51 @@ export default function VoiceConfiguration({
       console.error('No story or voice selected.')
       return
     }
-
-    // Trích xuất script từ story
-    const script = story.scenes
-      ?.map(scene => `# ${scene.title}\n${scene.narration}`)
-      .join('\n\n')
-
-    const configuration = {
-      text: script, // Sử dụng script từ story
-      voice: getSelectedVoiceName(),
-      speed: Number.parseFloat(speed),
-      stability: Number.parseFloat(stability),
-      style: Number.parseFloat(style)
-    }
-
+  
     try {
-      const response = await axios.post(
-        '/api/generation/voice',
-        configuration,
-        {
-          responseType: 'blob'
+      for (const scene of story.scenes || []) {
+        const script = `# ${scene.title}\n${scene.narration}`
+  
+        const configuration = {
+          text: script,
+          voice: getSelectedVoiceName(),
+          speed: Number.parseFloat(speed),
+          stability: Number.parseFloat(stability),
+          style: Number.parseFloat(style)
         }
-      )
-
-      const audioBlob = response.data
-      const url = URL.createObjectURL(audioBlob)
-      const audio = new Audio(url)
-
-      audio.onended = () => {
-        setIsPlaying(false)
-        URL.revokeObjectURL(url)
+  
+        // Gửi request để tạo voice từ scene script
+        const response = await axios.post(
+          '/api/generation/voice',
+          configuration,
+          { responseType: 'blob' }
+        )
+  
+        const audioBlob = response.data
+        const url = URL.createObjectURL(audioBlob)
+        const audio = new Audio(url)
+  
+        audio.onended = () => {
+          setIsPlaying(false)
+          URL.revokeObjectURL(url)
+        }
+  
+        // audio.play()
+        setIsPlaying(true)
+  
+        // Upload từng đoạn audio lên Cloudinary
+        await uploadAudioToCloudinary(audioBlob)
+  
+        // Chờ phát xong nếu bạn muốn từng đoạn phát liên tục:
+        // await new Promise(resolve => (audio.onended = resolve))
       }
-
-      // Upload file lên Cloudinary
-      await uploadAudioToCloudinary(audioBlob)
-
-      audio.play()
-
+  
       setIsConfigurationComplete(true)
     } catch (error) {
-      console.error('Error applying voice configuration:', error)
+      console.error('Error generating scene audios:', error)
     }
   }
-
+  
   return (
     <div>
       <h2 className='mb-4 text-xl font-medium'>Voice Configuration</h2>
