@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createGoogleUser } from '@/app/service/service'
+import { createGoogleUser } from '@/app/service/user.service'
 
 export async function POST(req: NextRequest) {
   try {

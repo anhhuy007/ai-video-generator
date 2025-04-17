@@ -22,7 +22,7 @@ const steps = [
 ]
 
 export default function GeneratePage() {
-  const [activeStep, setActiveStep] = useState('video-editor')
+  const [activeStep, setActiveStep] = useState('literary')
   const [completedSteps, setCompletedSteps] = useState<string[]>([])
 
   // Track completion status for each step
@@ -129,6 +129,7 @@ export default function GeneratePage() {
                 <TabsContent value='images'>
                   <ImageVideoGenerator
                     onComplete={() => setImagesComplete(true)}
+                    scenes={[]}
                   />
                 </TabsContent>
                 <TabsContent value='video-editor'>

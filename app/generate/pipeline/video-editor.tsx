@@ -27,6 +27,7 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
+import { useGenerationStore } from '@/store/useGenerationStore'
 
 // Mock data for images and audio files
 const MOCK_MEDIA_ITEMS = [
@@ -137,6 +138,10 @@ export default function VideoEditor({
   const [musicVolume, setMusicVolume] = useState([70])
   const [isPreviewReady, setIsPreviewReady] = useState(false)
   const [isEditorComplete, setIsEditorComplete] = useState(false)
+  const { story, images } = useGenerationStore()
+
+  console.log('Images:', images)
+  console.log('Story:', story)
 
   // Timeline items state
   const [videoItems, setVideoItems] = useState(MOCK_MEDIA_ITEMS)

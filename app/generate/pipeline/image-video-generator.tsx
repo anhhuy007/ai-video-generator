@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
@@ -11,7 +12,8 @@ import {
   RefreshCw,
   Edit,
   Maximize,
-  Minimize
+  Minimize,
+  Download
 } from 'lucide-react'
 import {
   Select,
@@ -30,8 +32,14 @@ import {
   DialogTitle
 } from '@/components/ui/dialog'
 import { Slider } from '@/components/ui/slider'
+import axios from 'axios'
+import { useGenerationStore } from '@/store/useGenerationStore'
+import { Scene } from '@/app/utils/type'
+interface ImageVideoGeneratorProps {
+  scenes: Scene[]
+  onComplete?: () => void
+}
 
-// Updated image styles with visual representations
 const IMAGE_STYLES = [
   {
     id: 'sketch',
@@ -65,69 +73,27 @@ const IMAGE_STYLES = [
   }
 ]
 
-// Mock script screens from the Literary Creator
-const MOCK_SCRIPT_SCREENS = [
-  {
-    id: 1,
-    title: 'Introduction',
-    content:
-      'Introducing the concept of artificial intelligence and its evolution.'
-  },
-  {
-    id: 2,
-    title: 'Historical Context',
-    content:
-      'The history of AI from early computing to modern machine learning.'
-  },
-  {
-    id: 3,
-    title: 'Current Applications',
-    content: 'How AI is used today in various industries and everyday life.'
-  },
-  {
-    id: 4,
-    title: 'Future Possibilities',
-    content: 'The potential future developments and impacts of AI technology.'
-  },
-  {
-    id: 5,
-    title: 'Ethical Considerations',
-    content: 'Exploring the ethical questions surrounding AI development.'
-  },
-  {
-    id: 6,
-    title: 'Conclusion',
-    content: "Summarizing the key points about AI's role in our future."
-  }
-]
-
 export default function ImageVideoGenerator({
-  onComplete
-}: {
-  onComplete: () => void
-}) {
+  onComplete = () => {}
+}: ImageVideoGeneratorProps) {
   const [activeTab, setActiveTab] = useState('generate')
-  const [imageStyle, setImageStyle] = useState('classic')
+  const [imageStyle, setImageStyle] = useState('sketch')
+  const [aspectRatio, setAspectRatio] = useState('16:9')
   const [isGenerating, setIsGenerating] = useState(false)
   const [isRegenerating, setIsRegenerating] = useState<number | null>(null)
-  const [isImageSelected, setIsImageSelected] = useState(false)
-  const [motionEffect, setMotionEffect] = useState('pan')
-  const [isCreatingVideo, setIsCreatingVideo] = useState(false)
-  const [videoCreated, setVideoCreated] = useState(false)
+  const [imageCreated, setImageCreated] = useState(false)
+
+  const { story, setImages } = useGenerationStore()
 
   // Screen-based image generation
-  const [scriptScreens, setScriptScreens] = useState(MOCK_SCRIPT_SCREENS)
-  const [screenImages, setScreenImages] = useState<{ [key: number]: string }>(
-    {}
-  )
+  const [scriptScreens, setScriptScreens] = useState(story.scenes)
+  const [screenImages, setScreenImages] = useState<{
+    [screenId: number]: string
+  }>({})
   const [selectedScreen, setSelectedScreen] = useState<number | null>(null)
   const [currentEditingScreen, setCurrentEditingScreen] = useState<
     number | null
   >(null)
-
-  // Dialog state for viewing full image
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [dialogScreen, setDialogScreen] = useState<number | null>(null)
 
   // Image editing states
   const [imageScale, setImageScale] = useState([100])
@@ -135,125 +101,182 @@ export default function ImageVideoGenerator({
   const [contrast, setContrast] = useState([100])
   const [saturation, setSaturation] = useState([100])
 
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [dialogScreen, setDialogScreen] = useState<number | null>(null)
+
   // Add a new state for editing script text
   const [editingScriptText, setEditingScriptText] = useState<string>('')
+  const [generationError, setGenerationError] = useState<string | null>(null)
 
   // Update completion status when all screens have images and video is created
   useEffect(() => {
-    if (isImageSelected) {
+    if (imageCreated) {
+      setImages(Object.values(screenImages))
       onComplete()
     }
-  }, [isImageSelected, onComplete])
+  }, [imageCreated, onComplete])
 
   // Check if all screens have images
   const allScreensHaveImages = () => {
-    return scriptScreens.every(screen => screenImages[screen.id])
+    return (
+      scriptScreens.length > 0 &&
+      scriptScreens.every(screen => screenImages[screen.id])
+    )
   }
 
-  const handleGenerateAllImages = () => {
-    setIsGenerating(true)
-
-    // Simulate API call to generate images for all screens
-    setTimeout(() => {
-      const newImages: { [key: number]: string } = {}
-
-      scriptScreens.forEach(screen => {
-        newImages[screen.id] =
-          `/placeholder.jpg?height=400&width=700&text=${encodeURIComponent(screen.title)}`
-      })
-
-      setScreenImages(newImages)
-      setIsGenerating(false)
-      setIsImageSelected(true)
-      setActiveTab('customize')
-    }, 3000)
-  }
-
-  const handleRegenerateImage = (screenId: number) => {
-    setIsRegenerating(screenId)
-
-    // Simulate API call to regenerate a specific image
-    setTimeout(() => {
-      setScreenImages(prev => ({
-        ...prev,
-        [screenId]: `/placeholder.jpg?height=400&width=700&text=${encodeURIComponent(scriptScreens.find(s => s.id === screenId)?.title || '')}&v=${Math.random()}`
-      }))
-      setIsRegenerating(null)
-    }, 2000)
-  }
-
-  const handleSelectScreen = (screenId: number) => {
-    setSelectedScreen(screenId === selectedScreen ? null : screenId)
-  }
-
-  // Function to open dialog with screen details
   const handleOpenDialog = (screenId: number) => {
     setDialogScreen(screenId)
     setDialogOpen(true)
   }
 
-  // Update the handleEditImage function to also set the script text
+  const generateImagePrompt = (screen: Scene, style: string) => {
+    return `Generate a ${style} image of the scene: ${screen.image}`
+  }
+
+  const handleGenerateAllImages = async () => {
+    console.log('Generating images for all screens...')
+    setIsGenerating(true)
+    setGenerationError(null)
+
+    try {
+      const response = await axios.post('/api/generation/images', {
+        scenes: scriptScreens,
+        characters: story.characters,
+        imageType: imageStyle
+      })
+
+      const scenesWithImages = response.data.scenes || []
+      const generatedImages = scenesWithImages.reduce(
+        (acc: any, screen: Scene) => {
+          acc[screen.id] = screen.image || null
+          return acc
+        },
+        {}
+      )
+
+      if (!generatedImages) {
+        throw new Error('No images returned from API')
+      }
+
+      setScreenImages(prev => ({
+        ...prev,
+        ...generatedImages
+      }))
+
+      setActiveTab('customize')
+      setImageCreated(true)
+
+      console.log(generatedImages)
+    } catch (error) {
+      console.error('Error generating images:', error)
+      setGenerationError(
+        'Failed to generate one or more images. Please try again.'
+      )
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  const handleRegenerateImage = async (screenId: number) => {
+    setImageCreated(false)
+    setIsRegenerating(screenId)
+    setGenerationError(null)
+
+    try {
+      const screen = scriptScreens.find(s => s.id === screenId)
+      if (!screen) return
+
+      const prompt = generateImagePrompt(screen, imageStyle)
+      const response = await axios.post('/api/generation/image', {
+        prompt
+      })
+
+      if (response.data.image) {
+        setScreenImages(prev => ({
+          ...prev,
+          [screenId]: response.data.image
+        }))
+
+        setActiveTab('customize')
+        setImageCreated(true)
+      } else {
+        throw new Error('No image returned from API')
+      }
+    } catch (error) {
+      console.error(`Error regenerating image for screen ${screenId}:`, error)
+      setGenerationError('Failed to regenerate image. Please try again.')
+    } finally {
+      setIsRegenerating(null)
+    }
+  }
+
   const handleEditImage = (screenId: number) => {
     setCurrentEditingScreen(screenId)
     // Set the current script text for editing
     const screen = scriptScreens.find(s => s.id === screenId)
     if (screen) {
-      setEditingScriptText(screen.content)
+      setEditingScriptText(screen.image)
     }
     setActiveTab('edit')
   }
 
-  // Add a function to handle script regeneration
-  const handleRegenerateWithScript = () => {
+  const handleRegenerateWithScript = async () => {
     if (currentEditingScreen === null) return
+    setIsRegenerating(currentEditingScreen)
+    setGenerationError(null)
 
     // Update the script content
-    setScriptScreens(prev =>
-      prev.map(screen =>
-        screen.id === currentEditingScreen
-          ? { ...screen, content: editingScriptText }
-          : screen
-      )
+    const updatedScreens = scriptScreens.map(screen =>
+      screen.id === currentEditingScreen
+        ? { ...screen, content: editingScriptText, image: editingScriptText }
+        : screen
     )
+    setScriptScreens(updatedScreens)
 
-    // Regenerate the image
-    setIsRegenerating(currentEditingScreen)
+    try {
+      const screen = updatedScreens.find(s => s.id === currentEditingScreen)
+      if (!screen) return
 
-    // Simulate API call to regenerate based on new script
-    setTimeout(() => {
-      setScreenImages(prev => ({
-        ...prev,
-        [currentEditingScreen]: `/placeholder.jpg?height=400&width=700&text=${encodeURIComponent(editingScriptText.substring(0, 20))}&v=${Math.random()}`
-      }))
+      const prompt = generateImagePrompt(screen, imageStyle)
+      const response = await axios.post('/api/generation/image', {
+        prompt
+      })
+
+      if (response.data.image) {
+        setScreenImages(prev => ({
+          ...prev,
+          [currentEditingScreen]: response.data.image
+        }))
+      } else {
+        throw new Error('No image returned from API')
+      }
+    } catch (error) {
+      console.error(`Error regenerating image with new script:`, error)
+      setGenerationError(
+        'Failed to regenerate image with new script. Please try again.'
+      )
+    } finally {
       setIsRegenerating(null)
-    }, 2000)
+    }
   }
 
   const handleSaveEdit = () => {
-    // In a real implementation, this would apply the edits to the image
-    // For now, we'll just simulate a change by adding a random parameter to the URL
-    if (currentEditingScreen) {
-      setScreenImages(prev => ({
-        ...prev,
-        [currentEditingScreen]:
-          prev[currentEditingScreen] + `&edited=true&t=${Date.now()}`
-      }))
-    }
     setActiveTab('customize')
     setCurrentEditingScreen(null)
   }
 
-  // const handleCreateVideo = () => {
-  //   if (!allScreensHaveImages()) return
+  const handleDownloadImage = (screenId: number) => {
+    const image = screenImages[screenId]
+    if (!image) return
 
-  //   setIsCreatingVideo(true)
-
-  //   // Simulate video creation
-  //   setTimeout(() => {
-  //     setIsCreatingVideo(false)
-  //     setVideoCreated(true)
-  //   }, 4000)
-  // }
+    // Create a temporary link element
+    const link = document.createElement('a')
+    link.href = image
+    link.download = `image-${screenId}.png`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
 
   return (
     <div className='space-y-6 p-4 md:p-6'>
@@ -262,6 +285,12 @@ export default function ImageVideoGenerator({
         Generate images for each screen in your script, customize them, and
         create a video.
       </p>
+
+      {generationError && (
+        <div className='mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-red-700'>
+          {generationError}
+        </div>
+      )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className='w-full'>
         <TabsList className='mb-6 grid w-full grid-cols-3'>
@@ -275,9 +304,6 @@ export default function ImageVideoGenerator({
           <TabsTrigger value='edit' disabled={currentEditingScreen === null}>
             Edit Image
           </TabsTrigger>
-          {/* <TabsTrigger value='video' disabled={!allScreensHaveImages()}>
-            Create Video
-          </TabsTrigger> */}
         </TabsList>
 
         <TabsContent value='generate'>
@@ -297,6 +323,8 @@ export default function ImageVideoGenerator({
                       src={style.image || '/placeholder.jpg'}
                       alt={`${style.name} style example`}
                       className='h-auto w-full border'
+                      width={500}
+                      height={500}
                     />
                     <div className='flex items-center justify-between p-2'>
                       <span className='mx-auto font-medium'>{style.name}</span>
@@ -323,6 +351,14 @@ export default function ImageVideoGenerator({
                 'Generate Images for All Screens'
               )}
             </Button>
+
+            {scriptScreens.length === 0 && (
+              <div className='rounded-md border bg-muted/20 p-8 text-center'>
+                <p className='text-muted-foreground'>
+                  No scenes available. Please add scenes to generate images.
+                </p>
+              </div>
+            )}
           </div>
         </TabsContent>
 
@@ -385,9 +421,11 @@ export default function ImageVideoGenerator({
                     </div>
                     {screenImages[screen.id] ? (
                       <img
-                        src={screenImages[screen.id] || '/placeholder.jpg'}
+                        src={screenImages[screen.id] || '/placeholder.svg'}
                         alt={`Image for ${screen.title}`}
                         className='h-auto w-full'
+                        height={500}
+                        width={500}
                       />
                     ) : (
                       <div className='flex h-40 items-center justify-center bg-muted'>
@@ -419,17 +457,22 @@ export default function ImageVideoGenerator({
               </div>
             </div>
 
-            {/* <div className='flex justify-between'>
+            <div className='flex justify-between'>
               <Button
                 variant='outline'
                 onClick={() => setActiveTab('generate')}
               >
                 Back to Generate
               </Button>
-            </div> */}
+              {/* <Button
+                onClick={() => setActiveTab('video')}
+                disabled={!allScreensHaveImages()}
+              >
+                Continue to Video Creation
+              </Button> */}
+            </div>
           </div>
         </TabsContent>
-
         <TabsContent value='edit'>
           {currentEditingScreen !== null &&
             screenImages[currentEditingScreen] && (
@@ -458,6 +501,8 @@ export default function ImageVideoGenerator({
                     }
                     alt={`Editing ${scriptScreens.find(s => s.id === currentEditingScreen)?.title}`}
                     className='h-auto w-full'
+                    width={500} // Adjust width as needed
+                    height={500} // Adjust height as needed
                     style={{
                       transform: `scale(${imageScale[0] / 100})`,
                       filter: `brightness(${brightness[0]}%) contrast(${contrast[0]}%) saturate(${saturation[0]}%)`
@@ -596,163 +641,7 @@ export default function ImageVideoGenerator({
               </div>
             )}
         </TabsContent>
-
-        {/* <TabsContent value='video'>
-          <div className='space-y-6'>
-            <div>
-              <Label>Selected Images for Video</Label>
-              <div className='mt-2 grid grid-cols-2 gap-4 md:grid-cols-3'>
-                {scriptScreens.map(screen => (
-                  <div
-                    key={screen.id}
-                    className='cursor-pointer overflow-hidden rounded-md border transition-all hover:shadow-md'
-                    onClick={() => handleOpenDialog(screen.id)}
-                  >
-                    <div className='truncate bg-muted/30 p-2 text-sm font-medium'>
-                      {screen.title}
-                    </div>
-                    <img
-                      src={screenImages[screen.id] || '/placeholder.jpg'}
-                      alt={`Image for ${screen.title}`}
-                      className='h-auto w-full'
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor='motion-effect'>Motion Effect</Label>
-              <Select value={motionEffect} onValueChange={setMotionEffect}>
-                <SelectTrigger id='motion-effect' className='w-full'>
-                  <SelectValue placeholder='Select motion effect' />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='pan'>Pan (Ken Burns Effect)</SelectItem>
-                  <SelectItem value='zoom'>Zoom In/Out</SelectItem>
-                  <SelectItem value='fade'>Fade Transition</SelectItem>
-                  <SelectItem value='slide'>Slide Transition</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor='transition-duration'>
-                Transition Duration (seconds)
-              </Label>
-              <Slider
-                id='transition-duration'
-                defaultValue={[2]}
-                min={0.5}
-                max={5}
-                step={0.5}
-              />
-              <div className='mt-1 flex justify-between text-xs text-muted-foreground'>
-                <span>0.5s</span>
-                <span>5s</span>
-              </div>
-            </div>
-
-            <div className='flex items-center space-x-2'>
-              <Switch id='auto-timing' defaultChecked />
-              <Label htmlFor='auto-timing'>
-                Automatically adjust timing based on script length
-              </Label>
-            </div>
-
-            <Button
-              onClick={handleCreateVideo}
-              disabled={
-                isCreatingVideo || videoCreated || !allScreensHaveImages()
-              }
-              className='w-full'
-            >
-              {isCreatingVideo ? (
-                <>
-                  <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                  Creating Video...
-                </>
-              ) : videoCreated ? (
-                <>
-                  <Check className='mr-2 h-4 w-4' />
-                  Video Created
-                </>
-              ) : (
-                'Create Video'
-              )}
-            </Button>
-
-            {videoCreated && (
-              <div className='rounded-md border p-4'>
-                <div className='flex aspect-video items-center justify-center bg-muted'>
-                  <div className='text-center'>
-                    <ImageIcon className='mx-auto h-12 w-12 text-muted-foreground' />
-                    <p className='mt-2 text-muted-foreground'>Video Preview</p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </TabsContent> */}
       </Tabs>
-
-      {/* Dialog for viewing full image and content */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className='max-w-3xl'>
-          {dialogScreen !== null && (
-            <>
-              <DialogHeader>
-                <DialogTitle className='text-xl'>
-                  {scriptScreens.find(s => s.id === dialogScreen)?.title}
-                </DialogTitle>
-                <DialogDescription>
-                  {scriptScreens.find(s => s.id === dialogScreen)?.content}
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className='mt-4 overflow-hidden rounded-md border'>
-                {screenImages[dialogScreen] ? (
-                  <img
-                    src={screenImages[dialogScreen] || '/placeholder.jpg'}
-                    alt={`Full view of ${scriptScreens.find(s => s.id === dialogScreen)?.title}`}
-                    className='h-auto w-full'
-                  />
-                ) : (
-                  <div className='flex h-64 items-center justify-center bg-muted'>
-                    <p className='text-muted-foreground'>
-                      No image generated yet
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              <div className='mt-4 flex justify-between'>
-                <Button
-                  variant='outline'
-                  onClick={() => handleRegenerateImage(dialogScreen)}
-                  disabled={isRegenerating === dialogScreen}
-                >
-                  {isRegenerating === dialogScreen ? (
-                    <>
-                      <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                      Regenerating...
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className='mr-2 h-4 w-4' />
-                      Regenerate Image
-                    </>
-                  )}
-                </Button>
-                <Button onClick={() => handleEditImage(dialogScreen)}>
-                  <Edit className='mr-2 h-4 w-4' />
-                  Edit Image & Script
-                </Button>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

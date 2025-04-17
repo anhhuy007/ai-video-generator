@@ -1,51 +1,94 @@
 'use client'
 
-import { useState, useEffect, use } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Slider } from '@/components/ui/slider'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Check, Play, Upload } from 'lucide-react'
+import { Check, Play, Info } from 'lucide-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from '@/components/ui/tooltip'
+import axios from 'axios'
+import { elevenlabs } from '@/lib/elevenlabs'
 
-const VOICE_PROVIDERS = [
-  {
-    id: 'elevenlabs',
-    name: 'ElevenLabs',
-    voices: ['Rachel', 'Thomas', 'Emily', 'Josh']
-  },
-  {
-    id: 'google',
-    name: 'Google TTS',
-    voices: ['Standard', 'Wavenet', 'Neural2', 'Studio']
-  },
-  {
-    id: 'amazon',
-    name: 'Amazon Polly',
-    voices: ['Joanna', 'Matthew', 'Kimberly', 'Joey']
-  }
+// Define options for speed, stability and style
+const SPEED_OPTIONS = [
+  { value: '0.7', label: '0.7 (Very Slow)' },
+  { value: '0.8', label: '0.8 (Slow)' },
+  { value: '0.9', label: '0.9 (Slightly Slow)' },
+  { value: '1.0', label: '1.0 (Normal)' },
+  { value: '1.1', label: '1.1 (Slightly Fast)' },
+  { value: '1.2', label: '1.2 (Fast)' }
 ]
+
+const STABILITY_OPTIONS = [
+  { value: '0', label: '0 (Maximum Emotion)' },
+  { value: '0.25', label: '0.25 (High Emotion)' },
+  { value: '0.5', label: '0.5 (Balanced)' },
+  { value: '0.75', label: '0.75 (Stable)' },
+  { value: '1', label: '1 (Maximum Stability)' }
+]
+
+const STYLE_OPTIONS = [
+  { value: '0', label: '0 (No Style)' },
+  { value: '0.25', label: '0.25 (Subtle)' },
+  { value: '0.5', label: '0.5 (Moderate)' },
+  { value: '0.75', label: '0.75 (Strong)' },
+  { value: '1', label: '1 (Maximum Style)' }
+]
+
+// Define voice interface
+interface Voice {
+  voice_id: string
+  name: string
+}
 
 export default function VoiceConfiguration({
   onComplete
 }: {
   onComplete: () => void
 }) {
-  const [provider, setProvider] = useState('elevenlabs')
-  const [voice, setVoice] = useState('Rachel')
-  const [speed, setSpeed] = useState([1])
-  const [tone, setTone] = useState([5])
-  const [intensity, setIntensity] = useState([5])
+  const [voices, setVoices] = useState<Voice[]>([])
+  const [selectedVoiceId, setSelectedVoiceId] = useState('')
+  const [speed, setSpeed] = useState('1.0')
+  const [stability, setStability] = useState('0.5')
+  const [style, setStyle] = useState('0')
   const [isPlaying, setIsPlaying] = useState(false)
-  const [useCustomVoice, setUseCustomVoice] = useState(false)
-  const [activeTab, setActiveTab] = useState('provider')
+  const [isLoading, setIsLoading] = useState(true)
   const [isConfigurationComplete, setIsConfigurationComplete] = useState(false)
 
-  // Track if voice has been previewed
-  const [voicePreviewed, setVoicePreviewed] = useState(false)
+  // Fetch voices from ElevenLabs API
+  useEffect(() => {
+    const fetchVoices = async () => {
+      setIsLoading(true)
+      try {
+        const voiceRes = await elevenlabs.voices.getAll()
+        const fetchedVoices = voiceRes.voices as Voice[]
 
-  const selectedProvider = VOICE_PROVIDERS.find(p => p.id === provider)
+        setVoices(fetchedVoices)
+
+        // Set default voice if available
+        if (fetchedVoices.length > 0) {
+          setSelectedVoiceId(fetchedVoices[0].voice_id)
+        }
+      } catch (error) {
+        console.error('Error fetching voices:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchVoices()
+  }, [])
 
   // Update completion status when configuration is complete
   useEffect(() => {
@@ -54,262 +97,236 @@ export default function VoiceConfiguration({
     }
   }, [isConfigurationComplete, onComplete])
 
-  const handlePreviewVoice = () => {
-    setIsPlaying(true)
-    // Simulate audio playback
-    setTimeout(() => {
-      setIsPlaying(false)
-      setVoicePreviewed(true)
-    }, 3000)
+  // Get selected voice name for display
+  const getSelectedVoiceName = () => {
+    const selectedVoice = voices.find(v => v.voice_id === selectedVoiceId)
+    return selectedVoice?.name || ''
   }
 
-  useEffect(() => {
-    if (provider === 'elevenlabs') {
-      setVoice('Rachel')
-    } else if (provider === 'google') {
-      setVoice('Standard')
-    } else if (provider === 'amazon') {
-      setVoice('Joanna')
+  const handlePreviewVoice = async () => {
+    if (!selectedVoiceId) return
+
+    setIsPlaying(true)
+    try {
+      const res = await axios.post(
+        '/api/conversations',
+        {
+          text: 'Đây là một đoạn văn bản mẫu để kiểm tra giọng nói.',
+          voice: getSelectedVoiceName(),
+          speed: Number.parseFloat(speed),
+          stability: Number.parseFloat(stability),
+          style: Number.parseFloat(style)
+        },
+        {
+          responseType: 'blob'
+        }
+      )
+
+      const audioBlob = res.data
+      const url = URL.createObjectURL(audioBlob)
+      const audio = new Audio(url)
+
+      audio.onended = () => {
+        setIsPlaying(false)
+        URL.revokeObjectURL(url)
+      }
+
+      audio.play()
+    } catch (error) {
+      console.error('Error previewing voice:', error)
+      setIsPlaying(false)
     }
-  }, [provider])
+  }
+
+  // useEffect(() => {
+  //   if (provider === 'elevenlabs') {
+  //     setVoice('Rachel')
+  //   } else if (provider === 'google') {
+  //     setVoice('Standard')
+  //   } else if (provider === 'amazon') {
+  //     setVoice('Joanna')
+  //   }
+  // }, [provider])
 
   const handleComplete = () => {
+    if (!selectedVoiceId) return
+
+    // Save the configuration
+    const configuration = {
+      voiceId: selectedVoiceId,
+      voiceName: getSelectedVoiceName(),
+      speed: Number.parseFloat(speed),
+      stability: Number.parseFloat(stability),
+      style: Number.parseFloat(style)
+    }
+
+    console.log('Voice configuration saved:', configuration)
     setIsConfigurationComplete(true)
   }
 
   return (
     <div>
-      <h2 className='mb-4 text-2xl font-bold'>Voice Configuration</h2>
-      <p className='mb-6 text-muted-foreground'>
-        Select a voice provider, customize voice settings, and preview before
-        applying.
-      </p>
+      <h2 className='mb-4 text-xl font-medium'>Voice Configuration</h2>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className='w-full'>
-        <TabsList className='mb-6 grid w-full grid-cols-3'>
-          <TabsTrigger value='provider'>Voice Provider</TabsTrigger>
-          <TabsTrigger value='settings'>Voice Settings</TabsTrigger>
-          <TabsTrigger value='preview'>Preview & Apply</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value='provider'>
-          <div className='space-y-6'>
-            <div>
-              <Label>Select Voice Provider</Label>
-              <div className='mt-2 grid grid-cols-1 gap-4 md:grid-cols-3'>
-                {VOICE_PROVIDERS.map(voiceProvider => (
-                  <Card
-                    key={voiceProvider.id}
-                    className={`cursor-pointer transition-colors hover:border-primary ${provider === voiceProvider.id ? 'border-primary bg-primary/10' : ''}`}
-                    onClick={() => setProvider(voiceProvider.id)}
-                  >
-                    <CardContent className='flex items-center justify-between p-4'>
-                      <span className='font-medium'>{voiceProvider.name}</span>
-                      {provider === voiceProvider.id && (
-                        <Check className='h-4 w-4 text-primary' />
-                      )}
-                    </CardContent>
-                  </Card>
+      {isLoading ? (
+        <div className='py-8 text-center text-muted-foreground'>
+          Loading voices...
+        </div>
+      ) : (
+        <div className='grid gap-4'>
+          {/* Voice Selection */}
+          <div>
+            <Label htmlFor='voice-select' className='mb-2 block'>
+              Voice
+            </Label>
+            <Select value={selectedVoiceId} onValueChange={setSelectedVoiceId}>
+              <SelectTrigger id='voice-select'>
+                <SelectValue placeholder='Select a voice' />
+              </SelectTrigger>
+              <SelectContent>
+                {voices.map(voice => (
+                  <SelectItem key={voice.voice_id} value={voice.voice_id}>
+                    {voice.name}
+                  </SelectItem>
                 ))}
-              </div>
-            </div>
+              </SelectContent>
+            </Select>
+          </div>
 
-            <div>
-              <Label>Select Voice</Label>
-              <RadioGroup
-                value={voice}
-                onValueChange={setVoice}
-                className='mt-2 grid grid-cols-2 gap-2'
-              >
-                {selectedProvider?.voices.map(voiceOption => (
-                  <div
-                    key={voiceOption}
-                    className='flex items-center space-x-2 rounded-md border p-3'
-                  >
-                    <RadioGroupItem value={voiceOption} id={voiceOption} />
-                    <Label htmlFor={voiceOption}>{voiceOption}</Label>
-                  </div>
+          {/* Speed Setting */}
+          <div>
+            <div className='mb-2 flex items-center gap-2'>
+              <Label htmlFor='speed-select'>Speed</Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className='h-4 w-4 text-muted-foreground' />
+                  </TooltipTrigger>
+                  <TooltipContent className='max-w-xs'>
+                    Controls the speed of the generated speech. Values range
+                    from 0.7 to 1.2, with 1.0 being the default speed. Lower
+                    values create slower, more deliberate speech while higher
+                    values produce faster-paced speech.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <Select value={speed} onValueChange={setSpeed}>
+              <SelectTrigger id='speed-select'>
+                <SelectValue placeholder='Select speed' />
+              </SelectTrigger>
+              <SelectContent>
+                {SPEED_OPTIONS.map(option => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
                 ))}
-              </RadioGroup>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Stability Setting */}
+          <div>
+            <div className='mb-2 flex items-center gap-2'>
+              <Label htmlFor='stability-select'>Stability</Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className='h-4 w-4 text-muted-foreground' />
+                  </TooltipTrigger>
+                  <TooltipContent className='max-w-xs'>
+                    Determines how stable the voice is and the randomness
+                    between each generation. Lower values introduce broader
+                    emotional range for the voice. Higher values can result in a
+                    monotonous voice with limited emotion.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
+            <Select value={stability} onValueChange={setStability}>
+              <SelectTrigger id='stability-select'>
+                <SelectValue placeholder='Select stability' />
+              </SelectTrigger>
+              <SelectContent>
+                {STABILITY_OPTIONS.map(option => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-            <div className='flex items-center space-x-2'>
-              <input
-                type='checkbox'
-                id='custom-voice'
-                checked={useCustomVoice}
-                onChange={() => setUseCustomVoice(!useCustomVoice)}
-                className='rounded border-gray-300'
-              />
-              <Label htmlFor='custom-voice'>
-                Use my own voice recording instead
-              </Label>
+          {/* Style Setting */}
+          <div>
+            <div className='mb-2 flex items-center gap-2'>
+              <Label htmlFor='style-select'>Style</Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className='h-4 w-4 text-muted-foreground' />
+                  </TooltipTrigger>
+                  <TooltipContent className='max-w-xs'>
+                    Determines the style exaggeration of the voice. This setting
+                    attempts to amplify the style of the original speaker. It
+                    does consume additional computational resources and might
+                    increase latency if set to anything other than 0.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
+            <Select value={style} onValueChange={setStyle}>
+              <SelectTrigger id='style-select'>
+                <SelectValue placeholder='Select style' />
+              </SelectTrigger>
+              <SelectContent>
+                {STYLE_OPTIONS.map(option => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-            {useCustomVoice && (
-              <div className='rounded-md border-2 border-dashed p-6 text-center'>
-                <Upload className='mx-auto mb-2 h-8 w-8 text-muted-foreground' />
-                <p className='mb-2 text-sm text-muted-foreground'>
-                  Drag and drop your voice recording here, or click to browse
-                </p>
-                <Button variant='outline' size='sm'>
-                  Upload Voice File
-                </Button>
-              </div>
-            )}
+          {/* Preview and Apply */}
+          <div className='flex flex-col gap-3 pt-2 sm:flex-row'>
+            <Button
+              variant='outline'
+              className='flex-1'
+              onClick={handlePreviewVoice}
+              disabled={isPlaying || !selectedVoiceId}
+            >
+              {isPlaying ? (
+                <span className='flex items-center'>
+                  <span className='mr-2 animate-pulse'>●</span>
+                  Playing...
+                </span>
+              ) : (
+                <>
+                  <Play className='mr-2 h-4 w-4' />
+                  Preview
+                </>
+              )}
+            </Button>
 
-            <Button onClick={() => setActiveTab('settings')} className='w-full'>
-              Continue to Voice Settings
+            <Button
+              className='flex-1'
+              onClick={handleComplete}
+              disabled={isConfigurationComplete || !selectedVoiceId}
+            >
+              {isConfigurationComplete ? (
+                <>
+                  <Check className='mr-2 h-4 w-4' />
+                  Applied
+                </>
+              ) : (
+                'Apply'
+              )}
             </Button>
           </div>
-        </TabsContent>
-
-        <TabsContent value='settings'>
-          <div className='space-y-6'>
-            <div>
-              <div className='mb-2 flex justify-between'>
-                <Label>Reading Speed</Label>
-                <span className='text-sm text-muted-foreground'>
-                  {speed[0]}x
-                </span>
-              </div>
-              <Slider
-                value={speed}
-                onValueChange={setSpeed}
-                min={0.5}
-                max={2}
-                step={0.1}
-              />
-              <div className='mt-1 flex justify-between text-xs text-muted-foreground'>
-                <span>Slower</span>
-                <span>Faster</span>
-              </div>
-            </div>
-
-            <div>
-              <div className='mb-2 flex justify-between'>
-                <Label>Tone</Label>
-                <span className='text-sm text-muted-foreground'>{tone[0]}</span>
-              </div>
-              <Slider
-                value={tone}
-                onValueChange={setTone}
-                min={1}
-                max={10}
-                step={1}
-              />
-              <div className='mt-1 flex justify-between text-xs text-muted-foreground'>
-                <span>Formal</span>
-                <span>Casual</span>
-              </div>
-            </div>
-
-            <div>
-              <div className='mb-2 flex justify-between'>
-                <Label>Intensity</Label>
-                <span className='text-sm text-muted-foreground'>
-                  {intensity[0]}
-                </span>
-              </div>
-              <Slider
-                value={intensity}
-                onValueChange={setIntensity}
-                min={1}
-                max={10}
-                step={1}
-              />
-              <div className='mt-1 flex justify-between text-xs text-muted-foreground'>
-                <span>Calm</span>
-                <span>Energetic</span>
-              </div>
-            </div>
-
-            <div className='flex justify-between'>
-              <Button
-                variant='outline'
-                onClick={() => setActiveTab('provider')}
-              >
-                Back to Provider
-              </Button>
-              <Button onClick={() => setActiveTab('preview')}>
-                Continue to Preview
-              </Button>
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value='preview'>
-          <div className='space-y-6'>
-            <div className='rounded-md bg-muted/50 p-4'>
-              <h3 className='mb-2 font-medium'>Voice Configuration Summary</h3>
-              <ul className='space-y-1 text-sm'>
-                <li>
-                  <span className='font-medium'>Provider:</span>{' '}
-                  {selectedProvider?.name}
-                </li>
-                <li>
-                  <span className='font-medium'>Voice:</span>{' '}
-                  {useCustomVoice ? 'Custom Voice Recording' : voice}
-                </li>
-                <li>
-                  <span className='font-medium'>Speed:</span> {speed[0]}x
-                </li>
-                <li>
-                  <span className='font-medium'>Tone:</span> {tone[0]}/10
-                </li>
-                <li>
-                  <span className='font-medium'>Intensity:</span> {intensity[0]}
-                  /10
-                </li>
-              </ul>
-            </div>
-
-            <div className='flex justify-center'>
-              <Button
-                variant='outline'
-                size='lg'
-                className='w-full md:w-auto'
-                onClick={handlePreviewVoice}
-                disabled={isPlaying}
-              >
-                {isPlaying ? (
-                  <span className='flex items-center'>
-                    <span className='mr-2 animate-pulse'>●</span>
-                    Playing preview...
-                  </span>
-                ) : (
-                  <>
-                    <Play className='mr-2 h-4 w-4' />
-                    Preview Voice
-                  </>
-                )}
-              </Button>
-            </div>
-
-            <div className='flex justify-between'>
-              <Button
-                variant='outline'
-                onClick={() => setActiveTab('settings')}
-              >
-                Back to Settings
-              </Button>
-              <Button
-                onClick={handleComplete}
-                disabled={isConfigurationComplete}
-              >
-                {isConfigurationComplete ? (
-                  <>
-                    <Check className='mr-2 h-4 w-4' />
-                    Voice Configured
-                  </>
-                ) : (
-                  'Apply Voice Configuration'
-                )}
-              </Button>
-            </div>
-          </div>
-        </TabsContent>
-      </Tabs>
+        </div>
+      )}
     </div>
   )
 }

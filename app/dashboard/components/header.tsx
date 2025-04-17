@@ -22,7 +22,6 @@ interface DashboardHeaderProps {
 
 export function DashboardHeader({ session, onSignOut }: DashboardHeaderProps) {
   const handleSignOut = () => {
-    console.log('Sign out clicked')
     onSignOut()
   }
 

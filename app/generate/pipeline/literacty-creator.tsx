@@ -10,7 +10,10 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Check, Loader2, Upload, FileText, Type } from 'lucide-react'
+import { Loader2, FileText, Type, Check, Upload } from 'lucide-react'
+import type { Scene, Story } from '@/app/utils/type'
+import { useGenerationStore } from '@/store/useGenerationStore'
+import { Slider } from '@/components/ui/slider'
 import mammoth from 'mammoth'
 import * as PDFJS from 'pdfjs-dist/legacy/build/pdf'
 
@@ -50,6 +53,7 @@ export default function LiteraryCreator({
   const [inputMethod, setInputMethod] = useState<'type' | 'upload'>('type')
 
   // File upload states
+  const [sceneCount, setSceneCount] = useState(3)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [isProcessingFile, setIsProcessingFile] = useState(false)
   const [fileProcessed, setFileProcessed] = useState(false)
@@ -63,6 +67,9 @@ export default function LiteraryCreator({
 
   // Track overall completion
   const [isComplete, setIsComplete] = useState(false)
+  const [error, setError] = useState('')
+
+  const { setStory } = useGenerationStore()
 
   // Update completion status when script is approved
   useEffect(() => {
@@ -82,26 +89,81 @@ export default function LiteraryCreator({
     setStyleSelected(true)
   }
 
+  function extractScript(story: Story): string {
+    try {
+      return story.scenes
+        .map((scene: Scene) => `# ${scene.title}\n${scene.narration}`)
+        .join('\n\n')
+    } catch (error) {
+      console.error('Error processing scenes:', error)
+      return ''
+    }
+  }
+
   const handleGenerateScript = () => {
     if (!topic) return
 
     setIsGenerating(true)
+    setError('')
 
-    // Simulate AI script generation
-    setTimeout(() => {
-      const scriptIntros = {
-        analysis: `# Analysis: ${topic}\n\nIn this comprehensive analysis, we'll explore the key aspects of ${topic} and its implications for our future. The subject presents several interesting dimensions worth examining in detail.`,
-        storytelling: `# The Story of ${topic}\n\nOnce upon a time, in a world not so different from our own, the concept of ${topic} began to take shape. This is the remarkable journey of how it evolved and changed our understanding.`,
-        poetry: `# Poetic Illustration: ${topic}\n\nThrough the lens of time,\n${topic} emerges, sublime.\nPatterns unfold, mysteries defined,\nIn verses of knowledge, beautifully aligned.`
-      }
-
-      setGeneratedScript(
-        scriptIntros[contentStyle as keyof typeof scriptIntros]
-      )
+    try {
+      fetch('http://127.0.0.1:8787/api/generate/content', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          topic,
+          type: contentStyle,
+          sceneCount
+        })
+      })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`Network response error: ${response.status}`)
+          }
+          return response.text()
+        })
+        .then(data => {
+          try {
+            const parsedData = JSON.parse(data)
+            const story = parsedData.story as Story
+            setStory(story)
+            const script = extractScript(story)
+            setGeneratedScript(script)
+            setActiveTab('preview')
+          } catch (err) {
+            console.error('Error extracting script:', err)
+            setError('Failed to process the generated script data')
+            handleFallbackScriptGeneration()
+          }
+        })
+        .catch(error => {
+          console.error('Error generating script:', error)
+          setError(`Failed to generate script: ${error.message}`)
+          handleFallbackScriptGeneration()
+        })
+        .finally(() => {
+          setIsGenerating(false)
+        })
+    } catch (error) {
+      console.error('Exception during fetch:', error)
+      handleFallbackScriptGeneration()
       setIsGenerating(false)
-      setScriptGenerated(true)
-      setActiveTab('preview')
-    }, 2000)
+    }
+  }
+
+  const handleFallbackScriptGeneration = () => {
+    console.log('Using fallback script generation')
+
+    const scriptIntros = {
+      analysis: `# Analysis: ${topic}\n\nIn this comprehensive analysis, we'll explore the key aspects of ${topic} and its implications for our future. The subject presents several interesting dimensions worth examining in detail.`,
+      storytelling: `# The Story of ${topic}\n\nOnce upon a time, in a world not so different from our own, the concept of ${topic} began to take shape. This is the remarkable journey of how it evolved and changed our understanding.`,
+      poetry: `# Poetic Illustration: ${topic}\n\nThrough the lens of time,\n${topic} emerges, sublime.\nPatterns unfold, mysteries defined,\nIn verses of knowledge, beautifully aligned.`
+    }
+
+    setGeneratedScript(scriptIntros[contentStyle as keyof typeof scriptIntros])
+    setActiveTab('preview')
   }
 
   const handleScriptEdit = (newScript: string) => {
@@ -123,37 +185,6 @@ export default function LiteraryCreator({
     }
   }
 
-  // const handleProcessFile = () => {
-  //   if (!uploadedFile) return
-
-  //   setIsProcessingFile(true)
-
-  //   // Simulate file processing
-  //   setTimeout(() => {
-  //     // Extract file extension
-  //     const fileExt = uploadedFile.name.split('.').pop()?.toLowerCase()
-
-  //     // Set topic to filename without extension
-  //     const fileName = uploadedFile.name.split('.')[0]
-  //     setTopic(fileName)
-  //     setTopicSelected(true)
-
-  //     // Generate simulated content based on file type
-  //     let extractedContent = ''
-  //     if (fileExt === 'pdf') {
-  //       extractedContent = `# Content extracted from PDF: ${uploadedFile.name}\n\nThis is the simulated content extracted from your PDF file. In a real implementation, we would parse the actual PDF content.\n\nThe document appears to discuss important aspects of ${fileName}, including key concepts and practical applications.`
-  //     } else if (fileExt === 'docx' || fileExt === 'doc') {
-  //       extractedContent = `# Content extracted from Word document: ${uploadedFile.name}\n\nThis is the simulated content extracted from your Word document. In a real implementation, we would parse the actual document content.\n\nThe document contains several sections covering ${fileName} with detailed explanations and examples.`
-  //     } else {
-  //       extractedContent = `# Content extracted from ${uploadedFile.name}\n\nThis is the simulated content extracted from your file. The system has attempted to parse the content and prepare it for video creation.`
-  //     }
-
-  //     setGeneratedScript(extractedContent)
-  //     setIsProcessingFile(false)
-  //     setFileProcessed(true)
-  //     setScriptGenerated(true)
-  //   }, 2000)
-  // }
   const handleProcessFile = async () => {
     if (!uploadedFile) return
 
