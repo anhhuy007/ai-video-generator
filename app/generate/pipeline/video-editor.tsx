@@ -37,6 +37,7 @@ import {
   SelectValue
 } from '@/components/ui/select'
 import useShotstackRender from '@/hooks/use-shotstack'
+import { string } from 'zod'
 
 // Mock data for images and audio files
 interface MediaItem {
@@ -45,6 +46,8 @@ interface MediaItem {
   image: string
   audio: string
   duration: number
+  transitionIn: string
+  transitionOut: string
 }
 
 // Format time in MM:SS format
@@ -105,29 +108,18 @@ export default function VideoEditor({
   const [musicStyle, setMusicStyle] = useState('upbeat')
   const [selectedEffects, setSelectedEffects] = useState<string[]>([])
 
-  const [transitionEffects, setTransitionEffects] = useState<{
-    [key: string]: { in: string; out: string }
-  }>({})
-
   // Render
-  const {
-    startRender,
-    isRendering,
-    renderData,
-    renderStatus,
-    renderProgress,
-    renderError,
-    renderId
-  } = useShotstackRender(media_items, {
-    apiKey: process.env.NEXT_PUBLIC_SHOTSTACK_API_KEY_SANDBOX,
-    apiUrl: process.env.NEXT_PUBLIC_SHOTSTACK_API_URL_SANDBOX
-  })
+  const { startRender, isRendering, renderData } = useShotstackRender(
+    media_items,
+    {
+      apiKey: process.env.NEXT_PUBLIC_SHOTSTACK_API_KEY_SANDBOX,
+      apiUrl: process.env.NEXT_PUBLIC_SHOTSTACK_API_URL_SANDBOX
+    }
+  )
 
   useEffect(() => {
     if (renderData) {
       console.log('Video đã render xong:', renderData)
-      // Xử lý video đã render xong ở đây
-      // renderData.url sẽ chứa đường dẫn đến video
     }
   }, [renderData])
 
@@ -139,7 +131,6 @@ export default function VideoEditor({
 
   useEffect(() => {
     const loadMediaItems = async () => {
-      // Loop through mp3_url and get the duration of each audio file
       const audioDurations = await Promise.all(
         mp3_url.map(url => getAudioDuration(url))
       )
@@ -150,18 +141,17 @@ export default function VideoEditor({
             id: `item-${index + 1}`,
             title: scene ? scene.title : `Untitled Scene ${index + 1}`,
             image: image,
-            // audio: mp3_url[index],
-            audio: '/placeholder-audio.mp3',
-            duration: audioDurations[index] || 2
+            audio: mp3_url[index],
+            duration: audioDurations[index] || 2,
+            transitionIn: 'none',
+            transitionOut: 'none'
           }
         })
-
         setMediaItems(items)
       } catch (error) {
         console.error('Failed to load media items:', error)
       }
     }
-
     loadMediaItems()
   }, [images, mp3_url, story])
 
@@ -232,13 +222,17 @@ export default function VideoEditor({
     type: 'in' | 'out',
     effect: string
   ) => {
-    setTransitionEffects(prev => ({
-      ...prev,
-      [itemId]: {
-        ...prev[itemId],
-        [type]: effect
-      }
-    }))
+    setMediaItems(prev =>
+      prev.map(item =>
+        item.id === itemId
+          ? {
+              ...item,
+              transitionIn: type === 'in' ? effect : item.transitionIn,
+              transitionOut: type === 'out' ? effect : item.transitionOut
+            }
+          : item
+      )
+    )
   }
 
   return (
@@ -387,7 +381,7 @@ export default function VideoEditor({
                         <div>
                           <Label className='mb-2 block'>Transition In</Label>
                           <Select
-                            value={transitionEffects[item.id]?.in || 'none'}
+                            value={item.transitionIn || 'none'}
                             onValueChange={value =>
                               updateTransitionEffect(item.id, 'in', value)
                             }
@@ -414,9 +408,9 @@ export default function VideoEditor({
                         <div>
                           <Label className='mb-2 block'>Transition Out</Label>
                           <Select
-                            value={transitionEffects[item.id]?.out || 'none'}
+                            value={item.transitionOut || 'none'}
                             onValueChange={value =>
-                              updateTransitionEffect(item.id, 'out', value)
+                              updateTransitionEffect(item.id, 'in', value)
                             }
                           >
                             <SelectTrigger>
@@ -674,7 +668,7 @@ export default function VideoEditor({
                       variant='outline'
                       size='sm'
                       className='mt-4 flex items-center gap-2'
-                      onClick={startRender}
+                      // onClick={startRender}
                       disabled={isRendering}
                     >
                       {isRendering ? (

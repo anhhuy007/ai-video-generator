@@ -20,17 +20,6 @@ export default function useShotstackRender(
   mediaItems: MediaItem[],
   options: ShotstackRenderOptions = {}
 ) {
-  console.log(mediaItems)
-  mediaItems = [
-    {
-      id: '1',
-      title: 'Thiên nhiên Việt Nam',
-      image:
-        'https://wpdemo.hotjoomlatemplates.com/test/images/random/random_image2.jpg',
-      audio: 'https://cdn.pixabay.com/audio/2022/11/22/audio_febc508485.mp3',
-      duration: 5
-    }
-  ]
   const [isRendering, setIsRendering] = useState(false)
   const [renderData, setRenderData] = useState<any>(null)
   const [renderStatus, setRenderStatus] = useState<string | null>(null)
@@ -39,17 +28,13 @@ export default function useShotstackRender(
   const [renderId, setRenderId] = useState<string | null>(null)
 
   const apiKey =
-    options.apiKey ||
-    process.env.SHOTSTACK_API_KEY_SANDBOX ||
-    'KODE5IZpIhiFfodgz0HNtt4LsKg9ikG9rg50lcnZ'
+    options.apiKey || process.env.NEXT_PUBLIC_SHOTSTACK_API_KEY_SANDBOX || ''
   const apiUrl =
     options.apiUrl ||
-    process.env.SHOTSTACK_API_URL_SANDBOX ||
+    process.env.NEXT_PUBLIC_SHOTSTACK_API_URL_SANDBOX ||
     'https://api.shotstack.io/stage'
   const pollInterval = options.pollInterval || 5000
 
-  console.log(apiKey)
-  console.log(apiUrl)
   const createTimeline = (items: MediaItem[]) => {
     const tracks = [
       {
