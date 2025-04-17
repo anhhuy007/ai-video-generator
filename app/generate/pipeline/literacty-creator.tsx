@@ -12,11 +12,11 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Check, Loader2, Upload, FileText, Type } from 'lucide-react'
 import mammoth from 'mammoth'
-import * as PDFJS from 'pdfjs-dist'
+import * as PDFJS from 'pdfjs-dist/legacy/build/pdf'
 
 // This works with bundlers that support web workers properly
 PDFJS.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.mjs',
+  'pdfjs-dist/legacy/build/pdf.worker.js',
   import.meta.url
 ).toString()
 

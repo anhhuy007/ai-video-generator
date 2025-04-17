@@ -17,17 +17,19 @@ import { DashboardHeader } from '../dashboard/components/header'
 const steps = [
   { id: 'literary', label: 'Literary Content' },
   { id: 'voice', label: 'Voice Config' },
-  { id: 'images', label: 'Images & Video' }
+  { id: 'images', label: 'Images & Video' },
+  { id: 'video-editor', label: 'Video Editor' }
 ]
 
 export default function GeneratePage() {
-  const [activeStep, setActiveStep] = useState('literary')
+  const [activeStep, setActiveStep] = useState('video-editor')
   const [completedSteps, setCompletedSteps] = useState<string[]>([])
 
   // Track completion status for each step
   const [literaryComplete, setLiteraryComplete] = useState(false)
   const [voiceComplete, setVoiceComplete] = useState(false)
   const [imagesComplete, setImagesComplete] = useState(false)
+  const [editorComplete, setEditorComplete] = useState(false)
 
   const currentStepIndex = steps.findIndex(step => step.id === activeStep)
 
@@ -57,6 +59,8 @@ export default function GeneratePage() {
         return voiceComplete
       case 'images':
         return imagesComplete
+      case 'video-editor':
+        return editorComplete
       default:
         return false
     }
@@ -67,7 +71,7 @@ export default function GeneratePage() {
       <div className='flex h-screen w-full overflow-hidden bg-background'>
         <DashboardSidebar />
         <div className='flex flex-1 flex-col overflow-hidden'>
-          <DashboardHeader />
+          {/* <DashboardHeader />  */}
           <div className='flex-1 overflow-auto p-4 md:p-6'>
             <h1 className='mb-8 text-3xl font-bold'>Create AI Video</h1>
 
@@ -110,7 +114,7 @@ export default function GeneratePage() {
               </div>
             </div>
 
-            <Card className='p-6'>
+            <Card className='space-y-6 p-4 md:p-6'>
               <Tabs value={activeStep} className='w-full'>
                 <TabsContent value='literary'>
                   <LiteraryCreator
@@ -126,6 +130,9 @@ export default function GeneratePage() {
                   <ImageVideoGenerator
                     onComplete={() => setImagesComplete(true)}
                   />
+                </TabsContent>
+                <TabsContent value='video-editor'>
+                  <VideoEditor onComplete={() => setEditorComplete(true)} />
                 </TabsContent>
               </Tabs>
 
@@ -151,7 +158,7 @@ export default function GeneratePage() {
                 )} */}
                 <div> </div>
 
-                {activeStep !== 'images' ? (
+                {activeStep !== 'video-editor' ? (
                   <Button
                     onClick={handleNext}
                     disabled={!isCurrentStepComplete()}
@@ -159,7 +166,7 @@ export default function GeneratePage() {
                     Next <ArrowRight className='ml-2 h-4 w-4' />
                   </Button>
                 ) : (
-                  <Button disabled={!imagesComplete}>Finish</Button>
+                  <Button disabled={!editorComplete}>Finish</Button>
                 )}
               </div>
             </Card>

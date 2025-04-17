@@ -110,6 +110,7 @@ export default function ImageVideoGenerator({
   const [imageStyle, setImageStyle] = useState('classic')
   const [isGenerating, setIsGenerating] = useState(false)
   const [isRegenerating, setIsRegenerating] = useState<number | null>(null)
+  const [isImageSelected, setIsImageSelected] = useState(false)
   const [motionEffect, setMotionEffect] = useState('pan')
   const [isCreatingVideo, setIsCreatingVideo] = useState(false)
   const [videoCreated, setVideoCreated] = useState(false)
@@ -139,10 +140,10 @@ export default function ImageVideoGenerator({
 
   // Update completion status when all screens have images and video is created
   useEffect(() => {
-    if (videoCreated) {
+    if (isImageSelected) {
       onComplete()
     }
-  }, [videoCreated, onComplete])
+  }, [isImageSelected, onComplete])
 
   // Check if all screens have images
   const allScreensHaveImages = () => {
@@ -163,7 +164,7 @@ export default function ImageVideoGenerator({
 
       setScreenImages(newImages)
       setIsGenerating(false)
-      // Automatically move to customize tab after generation
+      setIsImageSelected(true)
       setActiveTab('customize')
     }, 3000)
   }
@@ -242,20 +243,20 @@ export default function ImageVideoGenerator({
     setCurrentEditingScreen(null)
   }
 
-  const handleCreateVideo = () => {
-    if (!allScreensHaveImages()) return
+  // const handleCreateVideo = () => {
+  //   if (!allScreensHaveImages()) return
 
-    setIsCreatingVideo(true)
+  //   setIsCreatingVideo(true)
 
-    // Simulate video creation
-    setTimeout(() => {
-      setIsCreatingVideo(false)
-      setVideoCreated(true)
-    }, 4000)
-  }
+  //   // Simulate video creation
+  //   setTimeout(() => {
+  //     setIsCreatingVideo(false)
+  //     setVideoCreated(true)
+  //   }, 4000)
+  // }
 
   return (
-    <div>
+    <div className='space-y-6 p-4 md:p-6'>
       <h2 className='mb-4 text-2xl font-bold'>AI Image & Video Generator</h2>
       <p className='mb-6 text-muted-foreground'>
         Generate images for each screen in your script, customize them, and
@@ -263,7 +264,7 @@ export default function ImageVideoGenerator({
       </p>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className='w-full'>
-        <TabsList className='mb-6 grid w-full grid-cols-4'>
+        <TabsList className='mb-6 grid w-full grid-cols-3'>
           <TabsTrigger value='generate'>Generate Images</TabsTrigger>
           <TabsTrigger
             value='customize'
@@ -274,9 +275,9 @@ export default function ImageVideoGenerator({
           <TabsTrigger value='edit' disabled={currentEditingScreen === null}>
             Edit Image
           </TabsTrigger>
-          <TabsTrigger value='video' disabled={!allScreensHaveImages()}>
+          {/* <TabsTrigger value='video' disabled={!allScreensHaveImages()}>
             Create Video
-          </TabsTrigger>
+          </TabsTrigger> */}
         </TabsList>
 
         <TabsContent value='generate'>
@@ -418,14 +419,14 @@ export default function ImageVideoGenerator({
               </div>
             </div>
 
-            <div className='flex justify-between'>
+            {/* <div className='flex justify-between'>
               <Button
                 variant='outline'
                 onClick={() => setActiveTab('generate')}
               >
                 Back to Generate
               </Button>
-            </div>
+            </div> */}
           </div>
         </TabsContent>
 
@@ -596,7 +597,7 @@ export default function ImageVideoGenerator({
             )}
         </TabsContent>
 
-        <TabsContent value='video'>
+        {/* <TabsContent value='video'>
           <div className='space-y-6'>
             <div>
               <Label>Selected Images for Video</Label>
@@ -692,7 +693,7 @@ export default function ImageVideoGenerator({
               </div>
             )}
           </div>
-        </TabsContent>
+        </TabsContent> */}
       </Tabs>
 
       {/* Dialog for viewing full image and content */}
