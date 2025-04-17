@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Check, Play, Info } from 'lucide-react'
+import { useScript } from '@/app/context/ScriptContext';
 import {
   Select,
   SelectContent,
@@ -65,6 +66,7 @@ export default function VoiceConfiguration({
   const [isPlaying, setIsPlaying] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isConfigurationComplete, setIsConfigurationComplete] = useState(false)
+  const { script } = useScript(); // Lấy script từ Context
 
   // Fetch voices from ElevenLabs API
   useEffect(() => {
@@ -138,22 +140,43 @@ export default function VoiceConfiguration({
     }
   }
 
-  const handleComplete = () => {
-    if (!selectedVoiceId) return
+  const handleApply = async () => {
+    if (!selectedVoiceId) return;
 
-    // Save the configuration
     const configuration = {
-      voiceId: selectedVoiceId,
-      voiceName: getSelectedVoiceName(),
+      text: script, // Sử dụng script từ Context
+      voice: getSelectedVoiceName(),
       speed: Number.parseFloat(speed),
       stability: Number.parseFloat(stability),
-      style: Number.parseFloat(style)
+      style: Number.parseFloat(style),
+    };
+    
+
+    try {
+      const response = await axios.post(
+        '/api/generation/voice',
+        configuration,
+        {
+          responseType: 'blob'
+        }
+      )
+
+      const audioBlob = response.data
+      const url = URL.createObjectURL(audioBlob)
+      const audio = new Audio(url)
+
+      audio.onended = () => {
+        setIsPlaying(false)
+        URL.revokeObjectURL(url)
+      }
+
+      audio.play()
+
+      setIsConfigurationComplete(true);
+    } catch (error) {
+      console.error('Error applying voice configuration:', error);
     }
-
-    console.log('Voice configuration saved:', configuration)
-    setIsConfigurationComplete(true)
-  }
-
+  };
   return (
     <div>
       <h2 className='mb-4 text-xl font-medium'>Voice Configuration</h2>
@@ -302,7 +325,7 @@ export default function VoiceConfiguration({
 
             <Button
               className='flex-1'
-              onClick={handleComplete}
+              onClick={handleApply}
               disabled={isConfigurationComplete || !selectedVoiceId}
             >
               {isConfigurationComplete ? (

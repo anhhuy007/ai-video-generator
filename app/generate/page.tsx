@@ -10,14 +10,17 @@ import VoiceConfiguration from '@/app/generate/pipeline/voice-configuration'
 import ImageVideoGenerator from '@/app/generate/pipeline/image-video-generator'
 import VideoEditor from '@/app/generate/pipeline/video-editor'
 import Publishing from '@/app/generate/pipeline/publishing'
-
-const steps = [
-  { id: 'literary', label: 'Literary Content' },
-  { id: 'voice', label: 'Voice Config' },
-  { id: 'images', label: 'Images & Video' }
-]
+import { ScriptProvider } from '@/app/context/ScriptContext'
 
 export default function GeneratePage() {
+  return (
+    <ScriptProvider>
+      <GenerateSteps />
+    </ScriptProvider>
+  )
+}
+
+function GenerateSteps() {
   const [activeStep, setActiveStep] = useState('literary')
   const [completedSteps, setCompletedSteps] = useState<string[]>([])
 
@@ -27,6 +30,12 @@ export default function GeneratePage() {
   const [imagesComplete, setImagesComplete] = useState(false)
   const [editorComplete, setEditorComplete] = useState(false)
   const [publishComplete, setPublishComplete] = useState(false)
+
+  const steps = [
+    { id: 'literary', label: 'Literary Content' },
+    { id: 'voice', label: 'Voice Config' },
+    { id: 'images', label: 'Images & Video' }
+  ]
 
   const currentStepIndex = steps.findIndex(step => step.id === activeStep)
 
@@ -78,8 +87,8 @@ export default function GeneratePage() {
                   activeStep === step.id
                     ? 'border-primary bg-primary text-primary-foreground'
                     : completedSteps.includes(step.id)
-                      ? 'border-primary bg-primary text-primary-foreground'
-                      : 'border-muted-foreground text-muted-foreground'
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-muted-foreground text-muted-foreground'
                 }`}
               >
                 {completedSteps.includes(step.id) ? (

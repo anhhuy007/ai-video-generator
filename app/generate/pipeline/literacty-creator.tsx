@@ -12,6 +12,7 @@ import { Loader2, FileText } from 'lucide-react'
 import type { Scene, Story } from '@/app/utils/type'
 import { useGenerationStore } from '@/store/useGenerationStore'
 import { Slider } from '@/components/ui/slider'
+import { useScript } from '@/app/context/ScriptContext';
 
 const SUGGESTED_TOPICS = [
   'The Evolution of Artificial Intelligence',
@@ -46,6 +47,8 @@ export default function LiteraryCreator({
   const [sceneCount, setSceneCount] = useState(3)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const { setStory } = useGenerationStore()
+  const { setScript } = useScript(); // Lấy hàm setScript từ Context
+
 
   const handleGenerateScript = () => {
     if (!topic) return
@@ -77,6 +80,7 @@ export default function LiteraryCreator({
             setStory(story)
             const script = extractScript(story)
             setGeneratedScript(script)
+            setScript(script)
             setActiveTab('preview')
           } catch (err) {
             console.error('Error extracting script:', err)
