@@ -642,6 +642,63 @@ export default function ImageVideoGenerator({
             )}
         </TabsContent>
       </Tabs>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className='max-w-3xl'>
+          {dialogScreen !== null && (
+            <>
+              <DialogHeader>
+                <DialogTitle className='text-xl'>
+                  {scriptScreens.find(s => s.id === dialogScreen)?.title}
+                </DialogTitle>
+                <DialogDescription>
+                  {scriptScreens.find(s => s.id === dialogScreen)?.description}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className='mt-4 overflow-hidden rounded-md border'>
+                {screenImages[dialogScreen] ? (
+                  <img
+                    src={screenImages[dialogScreen] || '/placeholder.svg'}
+                    alt={`Full view of ${scriptScreens.find(s => s.id === dialogScreen)?.title}`}
+                    className='h-auto w-full'
+                  />
+                ) : (
+                  <div className='flex h-64 items-center justify-center bg-muted'>
+                    <p className='text-muted-foreground'>
+                      No image generated yet
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className='mt-4 flex justify-between'>
+                <Button
+                  variant='outline'
+                  onClick={() => handleRegenerateImage(dialogScreen)}
+                  disabled={isRegenerating === dialogScreen}
+                >
+                  {isRegenerating === dialogScreen ? (
+                    <>
+                      <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                      Regenerating...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className='mr-2 h-4 w-4' />
+                      Regenerate Image
+                    </>
+                  )}
+                </Button>
+                <Button onClick={() => handleEditImage(dialogScreen)}>
+                  <Edit className='mr-2 h-4 w-4' />
+                  Edit Image & Script
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, use } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
@@ -16,9 +16,19 @@ import {
   Play,
   Pause,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Loader2
 } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
+
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
+import { useGenerationStore } from '@/store/useGenerationStore'
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent
+} from '@/components/ui/accordion'
 import {
   Select,
   SelectContent,
@@ -26,106 +36,54 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
-import { useGenerationStore } from '@/store/useGenerationStore'
+import useShotstackRender from '@/hooks/use-shotstack'
 
 // Mock data for images and audio files
-const MOCK_MEDIA_ITEMS = [
-  {
-    id: 'item-1',
-    title: 'Introduction',
-    image: '/placeholder.jpg?height=200&width=350&text=Introduction',
-    audio: '/mock-audio-1.mp3',
-    duration: 15
-  },
-  {
-    id: 'item-2',
-    title: 'Historical Context',
-    image: '/placeholder.jpg?height=200&width=350&text=Historical+Context',
-    audio: '/mock-audio-2.mp3',
-    duration: 22
-  },
-  {
-    id: 'item-3',
-    title: 'Current Applications',
-    image: '/placeholder.jpg?height=200&width=350&text=Current+Applications',
-    audio: '/mock-audio-3.mp3',
-    duration: 18
-  },
-  {
-    id: 'item-4',
-    title: 'Future Possibilities',
-    image: '/placeholder.jpg?height=200&width=350&text=Future+Possibilities',
-    audio: '/mock-audio-4.mp3',
-    duration: 20
-  },
-  {
-    id: 'item-5',
-    title: 'Ethical Considerations',
-    image: '/placeholder.jpg?height=200&width=350&text=Ethical+Considerations',
-    audio: '/mock-audio-5.mp3',
-    duration: 25
-  },
-  {
-    id: 'item-6',
-    title: 'Conclusion',
-    image: '/placeholder.jpg?height=200&width=350&text=Conclusion',
-    audio: '/mock-audio-6.mp3',
-    duration: 12
-  },
-  {
-    id: 'item-7',
-    title: 'Introduction',
-    image: '/placeholder.jpg?height=200&width=350&text=Introduction',
-    audio: '/mock-audio-1.mp3',
-    duration: 15
-  },
-  {
-    id: 'item-8',
-    title: 'Historical Context',
-    image: '/placeholder.jpg?height=200&width=350&text=Historical+Context',
-    audio: '/mock-audio-2.mp3',
-    duration: 22
-  },
-  {
-    id: 'item-9',
-    title: 'Current Applications',
-    image: '/placeholder.jpg?height=200&width=350&text=Current+Applications',
-    audio: '/mock-audio-3.mp3',
-    duration: 18
-  },
-  {
-    id: 'item-10',
-    title: 'Future Possibilities',
-    image: '/placeholder.jpg?height=200&width=350&text=Future+Possibilities',
-    audio: '/mock-audio-4.mp3',
-    duration: 20
-  },
-  {
-    id: 'item-11',
-    title: 'Ethical Considerations',
-    image: '/placeholder.jpg?height=200&width=350&text=Ethical+Considerations',
-    audio: '/mock-audio-5.mp3',
-    duration: 25
-  },
-  {
-    id: 'item-12',
-    title: 'Conclusion',
-    image: '/placeholder.jpg?height=200&width=350&text=Conclusion',
-    audio: '/mock-audio-6.mp3',
-    duration: 12
-  }
+interface MediaItem {
+  id: string
+  title: string
+  image: string
+  audio: string
+  duration: number
+}
+
+// Format time in MM:SS format
+const formatTime = (seconds: number) => {
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = Math.floor(seconds % 60)
+  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
+}
+
+const getAudioDuration = (url: string): Promise<number> => {
+  return new Promise((resolve, reject) => {
+    const audio = new Audio()
+    audio.src = url
+    audio.addEventListener('loadedmetadata', () => {
+      resolve(audio.duration)
+    })
+    audio.addEventListener('error', err => {
+      reject(err)
+    })
+  })
+}
+
+const TRANSITION_EFFECTS = [
+  { value: 'none', label: 'None' },
+  { value: 'fade', label: 'Fade' },
+  { value: 'slideLeft', label: 'Slide Left' },
+  { value: 'slideRight', label: 'Slide Right' },
+  { value: 'slideUp', label: 'Slide Up' },
+  { value: 'slideDown', label: 'Slide Down' },
+  { value: 'circleOpen', label: 'Circle Open' },
+  { value: 'circleClose', label: 'Circle Close' },
+  { value: 'wipeLeft', label: 'Wipe Left' },
+  { value: 'wipeRight', label: 'Wipe Right' },
+  { value: 'wipeUp', label: 'Wipe Up' },
+  { value: 'wipeDown', label: 'Wipe Down' },
+  { value: 'reveal', label: 'Reveal' }
 ]
 
 // Transition options
-const TRANSITIONS = [
-  { id: 'none', name: 'None' },
-  { id: 'fade', name: 'Fade' },
-  { id: 'slide', name: 'Slide' },
-  { id: 'zoom', name: 'Zoom' },
-  { id: 'wipe', name: 'Wipe' },
-  { id: 'dissolve', name: 'Dissolve' }
-]
 
 export default function VideoEditor({
   onComplete
@@ -138,30 +96,88 @@ export default function VideoEditor({
   const [musicVolume, setMusicVolume] = useState([70])
   const [isPreviewReady, setIsPreviewReady] = useState(false)
   const [isEditorComplete, setIsEditorComplete] = useState(false)
-  const { story, images } = useGenerationStore()
+  const { story, images, mp3_url } = useGenerationStore()
+  const [media_items, setMediaItems] = useState<MediaItem[]>([])
 
-  console.log('Images:', images)
-  console.log('Story:', story)
+  // Effect and audio settings
+  const [subtitleStyle, setSubtitleStyle] = useState('standard')
+  const [subtitlePosition, setSubtitlePosition] = useState('bottom')
+  const [musicStyle, setMusicStyle] = useState('upbeat')
+  const [selectedEffects, setSelectedEffects] = useState<string[]>([])
+
+  const [transitionEffects, setTransitionEffects] = useState<{
+    [key: string]: { in: string; out: string }
+  }>({})
+
+  // Render
+  const {
+    startRender,
+    isRendering,
+    renderData,
+    renderStatus,
+    renderProgress,
+    renderError,
+    renderId
+  } = useShotstackRender(media_items, {
+    apiKey: process.env.NEXT_PUBLIC_SHOTSTACK_API_KEY_SANDBOX,
+    apiUrl: process.env.NEXT_PUBLIC_SHOTSTACK_API_URL_SANDBOX
+  })
+
+  useEffect(() => {
+    if (renderData) {
+      console.log('Video đã render xong:', renderData)
+      // Xử lý video đã render xong ở đây
+      // renderData.url sẽ chứa đường dẫn đến video
+    }
+  }, [renderData])
+
+  const toggleEffect = (effect: string) => {
+    setSelectedEffects(prev =>
+      prev.includes(effect) ? prev.filter(e => e !== effect) : [...prev, effect]
+    )
+  }
+
+  useEffect(() => {
+    const loadMediaItems = async () => {
+      // Loop through mp3_url and get the duration of each audio file
+      const audioDurations = await Promise.all(
+        mp3_url.map(url => getAudioDuration(url))
+      )
+      try {
+        const items: MediaItem[] = images.map((image, index) => {
+          const scene = story.scenes[index]
+          return {
+            id: `item-${index + 1}`,
+            title: scene ? scene.title : `Untitled Scene ${index + 1}`,
+            image: image,
+            // audio: mp3_url[index],
+            audio: '/placeholder-audio.mp3',
+            duration: audioDurations[index] || 2
+          }
+        })
+
+        setMediaItems(items)
+      } catch (error) {
+        console.error('Failed to load media items:', error)
+      }
+    }
+
+    loadMediaItems()
+  }, [images, mp3_url, story])
+
+  useEffect(() => {
+    console.log('Media items:', media_items)
+  }, [media_items])
 
   // Timeline items state
-  const [videoItems, setVideoItems] = useState(MOCK_MEDIA_ITEMS)
   // const [timelineItems, setTimelineItems] = useState<any[]>([])
   // const [transitions, setTransitions] = useState<{ [key: string]: string }>({})
-
-  // Add a playhead indicator that shows current playback position
-  // Add this state near the other state declarations:
-  const [playbackPosition, setPlaybackPosition] = useState(0)
-  const [isPlaying, setIsPlaying] = useState(false)
-
   // Audio playback state
   const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
   // Calculate total duration
-  const totalDuration = videoItems.reduce(
-    (total, item) => total + item.duration,
-    0
-  )
+  const totalDuration = 10
 
   // Update completion status when editor is complete
   useEffect(() => {
@@ -169,43 +185,6 @@ export default function VideoEditor({
       onComplete()
     }
   }, [isEditorComplete, onComplete])
-
-  // Add this function to handle playback simulation:
-
-  // Simulate playback with moving playhead
-  const simulatePlayback = () => {
-    // if (timelineItems.length === 0) return
-    if (videoItems.length === 0) return
-    setIsPlaying(true)
-    setPlaybackPosition(0)
-
-    // Simulate playback by moving the playhead
-    const interval = setInterval(() => {
-      setPlaybackPosition(prev => {
-        if (prev >= totalDuration) {
-          clearInterval(interval)
-          setIsPlaying(false)
-          return 0
-        }
-        return prev + 0.1 // Increment by 100ms
-      })
-    }, 100)
-
-    // Store interval ID for cleanup
-    return () => clearInterval(interval)
-  }
-
-  // Update the preview button in the preview tab to use the simulation:
-  // Find the handlePreview function and replace it with:
-  const handlePreview = () => {
-    setIsPreviewReady(true)
-    const cleanup = simulatePlayback()
-
-    // Clean up the interval when preview is done
-    setTimeout(() => {
-      if (cleanup) cleanup()
-    }, totalDuration * 1000)
-  }
 
   const handleComplete = () => {
     setIsEditorComplete(true)
@@ -216,7 +195,7 @@ export default function VideoEditor({
 
     const { source, destination } = result
 
-    setVideoItems(prev => {
+    setMediaItems(prev => {
       const newItems = [...prev]
       const [movedItem] = newItems.splice(source.index, 1)
       newItems.splice(destination.index, 0, movedItem)
@@ -247,6 +226,21 @@ export default function VideoEditor({
     setCurrentlyPlaying(null)
   }
 
+  // Update transition effect
+  const updateTransitionEffect = (
+    itemId: string,
+    type: 'in' | 'out',
+    effect: string
+  ) => {
+    setTransitionEffects(prev => ({
+      ...prev,
+      [itemId]: {
+        ...prev[itemId],
+        [type]: effect
+      }
+    }))
+  }
+
   return (
     <div>
       <h2 className='mb-4 text-2xl font-bold'>Advanced Video Editor</h2>
@@ -269,9 +263,9 @@ export default function VideoEditor({
           <div className='space-y-6'>
             {/* Available Media Items Panel */}
             <Card>
-              <CardContent className='p-4'>
+              <CardContent className='p-10'>
                 <Label className='mb-4 block text-base font-medium'>
-                  Available Media
+                  Media Items
                 </Label>
                 <DragDropContext onDragEnd={handleDragEnd}>
                   <Droppable
@@ -284,12 +278,12 @@ export default function VideoEditor({
                         {...provided.droppableProps}
                         ref={provided.innerRef}
                       >
-                        {videoItems.length === 0 ? (
+                        {media_items.length === 0 ? (
                           <div className='w-full py-8 text-center text-muted-foreground'>
                             <p>All items have been added to the timeline</p>
                           </div>
                         ) : (
-                          videoItems.map((item, index) => (
+                          media_items.map((item, index) => (
                             <Draggable
                               key={item.id}
                               draggableId={item.id}
@@ -360,6 +354,95 @@ export default function VideoEditor({
 
         <TabsContent value='effects'>
           <div className='space-y-6'>
+            <div>
+              <Label className='mb-2 block text-lg font-medium'>
+                Scene Transitions
+              </Label>
+              <p className='mb-4 text-sm text-muted-foreground'>
+                Select transition effects for each scene in your video
+              </p>
+
+              <div className='grid grid-cols-1 gap-4'>
+                {media_items.map((item, index) => (
+                  <Card key={item.id} className='overflow-hidden'>
+                    <CardContent className='p-4'>
+                      <div className='grid grid-cols-1 gap-4 md:grid-cols-3'>
+                        <div className='flex items-center space-x-3'>
+                          <img
+                            src={item.image || '/placeholder.svg'}
+                            alt={item.title}
+                            className='h-16 w-16 rounded-md object-cover'
+                          />
+                          <div>
+                            <div className='font-medium'>{item.title}</div>
+                            <div className='text-xs text-muted-foreground'>
+                              {index === 0
+                                ? 'First Scene'
+                                : `Scene ${index + 1}`}{' '}
+                              • {formatTime(item.duration)}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <Label className='mb-2 block'>Transition In</Label>
+                          <Select
+                            value={transitionEffects[item.id]?.in || 'none'}
+                            onValueChange={value =>
+                              updateTransitionEffect(item.id, 'in', value)
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder='Select transition in effect' />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {TRANSITION_EFFECTS.map(effect => (
+                                <SelectItem
+                                  key={`in-${effect.value}`}
+                                  value={effect.value}
+                                >
+                                  {effect.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <div className='mt-2 text-xs text-muted-foreground'>
+                            Effect when this scene appears
+                          </div>
+                        </div>
+
+                        <div>
+                          <Label className='mb-2 block'>Transition Out</Label>
+                          <Select
+                            value={transitionEffects[item.id]?.out || 'none'}
+                            onValueChange={value =>
+                              updateTransitionEffect(item.id, 'out', value)
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder='Select transition out effect' />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {TRANSITION_EFFECTS.map(effect => (
+                                <SelectItem
+                                  key={`out-${effect.value}`}
+                                  value={effect.value}
+                                >
+                                  {effect.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <div className='mt-2 text-xs text-muted-foreground'>
+                            Effect when transitioning to the next scene
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
             <div className='grid grid-cols-1 gap-6 md:grid-cols-2'>
               <div>
                 <Label className='mb-2 block'>Subtitles</Label>
@@ -381,13 +464,34 @@ export default function VideoEditor({
                         <div>
                           <Label className='text-xs'>Subtitle Style</Label>
                           <div className='mt-1 grid grid-cols-3 gap-2'>
-                            <div className='cursor-pointer rounded-md border border-primary bg-primary/10 p-2 text-center text-xs'>
+                            <div
+                              className={`cursor-pointer rounded-md border p-2 text-center text-xs ${
+                                subtitleStyle === 'standard'
+                                  ? 'border-primary bg-primary/10'
+                                  : 'hover:bg-muted/50'
+                              }`}
+                              onClick={() => setSubtitleStyle('standard')}
+                            >
                               Standard
                             </div>
-                            <div className='cursor-pointer rounded-md border p-2 text-center text-xs'>
+                            <div
+                              className={`cursor-pointer rounded-md border p-2 text-center text-xs ${
+                                subtitleStyle === 'minimal'
+                                  ? 'border-primary bg-primary/10'
+                                  : 'hover:bg-muted/50'
+                              }`}
+                              onClick={() => setSubtitleStyle('minimal')}
+                            >
                               Minimal
                             </div>
-                            <div className='cursor-pointer rounded-md border p-2 text-center text-xs'>
+                            <div
+                              className={`cursor-pointer rounded-md border p-2 text-center text-xs ${
+                                subtitleStyle === 'bold'
+                                  ? 'border-primary bg-primary/10'
+                                  : 'hover:bg-muted/50'
+                              }`}
+                              onClick={() => setSubtitleStyle('bold')}
+                            >
                               Bold
                             </div>
                           </div>
@@ -396,13 +500,34 @@ export default function VideoEditor({
                         <div>
                           <Label className='text-xs'>Position</Label>
                           <div className='mt-1 grid grid-cols-3 gap-2'>
-                            <div className='cursor-pointer rounded-md border p-2 text-center text-xs'>
+                            <div
+                              className={`cursor-pointer rounded-md border p-2 text-center text-xs ${
+                                subtitlePosition === 'top'
+                                  ? 'border-primary bg-primary/10'
+                                  : 'hover:bg-muted/50'
+                              }`}
+                              onClick={() => setSubtitlePosition('top')}
+                            >
                               Top
                             </div>
-                            <div className='cursor-pointer rounded-md border border-primary bg-primary/10 p-2 text-center text-xs'>
+                            <div
+                              className={`cursor-pointer rounded-md border p-2 text-center text-xs ${
+                                subtitlePosition === 'bottom'
+                                  ? 'border-primary bg-primary/10'
+                                  : 'hover:bg-muted/50'
+                              }`}
+                              onClick={() => setSubtitlePosition('bottom')}
+                            >
                               Bottom
                             </div>
-                            <div className='cursor-pointer rounded-md border p-2 text-center text-xs'>
+                            <div
+                              className={`cursor-pointer rounded-md border p-2 text-center text-xs ${
+                                subtitlePosition === 'floating'
+                                  ? 'border-primary bg-primary/10'
+                                  : 'hover:bg-muted/50'
+                              }`}
+                              onClick={() => setSubtitlePosition('floating')}
+                            >
                               Floating
                             </div>
                           </div>
@@ -431,16 +556,44 @@ export default function VideoEditor({
                     {backgroundMusic && (
                       <div className='space-y-4'>
                         <div className='grid grid-cols-2 gap-2'>
-                          <div className='cursor-pointer rounded-md border border-primary bg-primary/10 p-2 text-center text-xs'>
+                          <div
+                            className={`cursor-pointer rounded-md border p-2 text-center text-xs ${
+                              musicStyle === 'upbeat'
+                                ? 'border-primary bg-primary/10'
+                                : 'hover:bg-muted/50'
+                            }`}
+                            onClick={() => setMusicStyle('upbeat')}
+                          >
                             Upbeat
                           </div>
-                          <div className='cursor-pointer rounded-md border p-2 text-center text-xs'>
+                          <div
+                            className={`cursor-pointer rounded-md border p-2 text-center text-xs ${
+                              musicStyle === 'relaxing'
+                                ? 'border-primary bg-primary/10'
+                                : 'hover:bg-muted/50'
+                            }`}
+                            onClick={() => setMusicStyle('relaxing')}
+                          >
                             Relaxing
                           </div>
-                          <div className='cursor-pointer rounded-md border p-2 text-center text-xs'>
+                          <div
+                            className={`cursor-pointer rounded-md border p-2 text-center text-xs ${
+                              musicStyle === 'dramatic'
+                                ? 'border-primary bg-primary/10'
+                                : 'hover:bg-muted/50'
+                            }`}
+                            onClick={() => setMusicStyle('dramatic')}
+                          >
                             Dramatic
                           </div>
-                          <div className='cursor-pointer rounded-md border p-2 text-center text-xs'>
+                          <div
+                            className={`cursor-pointer rounded-md border p-2 text-center text-xs ${
+                              musicStyle === 'corporate'
+                                ? 'border-primary bg-primary/10'
+                                : 'hover:bg-muted/50'
+                            }`}
+                            onClick={() => setMusicStyle('corporate')}
+                          >
                             Corporate
                           </div>
                         </div>
@@ -482,7 +635,12 @@ export default function VideoEditor({
                 ].map((effect, index) => (
                   <div
                     key={index}
-                    className='cursor-pointer rounded-md border p-2 text-center text-sm hover:bg-muted/50'
+                    className={`cursor-pointer rounded-md border p-2 text-center text-sm ${
+                      selectedEffects.includes(effect)
+                        ? 'border-primary bg-primary/10'
+                        : 'hover:bg-muted/50'
+                    }`}
+                    onClick={() => toggleEffect(effect)}
                   >
                     {effect}
                   </div>
@@ -515,10 +673,18 @@ export default function VideoEditor({
                     <Button
                       variant='outline'
                       size='sm'
-                      className='mt-4'
-                      onClick={handlePreview}
+                      className='mt-4 flex items-center gap-2'
+                      onClick={startRender}
+                      disabled={isRendering}
                     >
-                      Generate Preview
+                      {isRendering ? (
+                        <>
+                          <Loader2 className='h-4 w-4 animate-spin' />
+                          Generating Video...
+                        </>
+                      ) : (
+                        'Generate Video'
+                      )}
                     </Button>
                   )}
                 </div>
