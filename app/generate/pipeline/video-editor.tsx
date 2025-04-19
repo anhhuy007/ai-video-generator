@@ -39,6 +39,7 @@ import {
 import useShotstackRender from '@/hooks/use-shotstack'
 import { string } from 'zod'
 import { MediaItem, Effect } from '@/app/utils/type'
+import { error } from 'console'
 
 // Format time in MM:SS format
 const formatTime = (seconds: number) => {
@@ -63,24 +64,19 @@ const getAudioDuration = (url: string): Promise<number> => {
 const TRANSITION_EFFECTS = [
   { value: 'none', label: 'None' },
   { value: 'fade', label: 'Fade' },
+  { value: 'fadeFast', label: 'Fade Fast' },
   { value: 'slideLeft', label: 'Slide Left' },
   { value: 'slideRight', label: 'Slide Right' },
   { value: 'slideUp', label: 'Slide Up' },
   { value: 'slideDown', label: 'Slide Down' },
-  { value: 'circleOpen', label: 'Circle Open' },
-  { value: 'circleClose', label: 'Circle Close' },
-  { value: 'wipeLeft', label: 'Wipe Left' },
-  { value: 'wipeRight', label: 'Wipe Right' },
-  { value: 'wipeUp', label: 'Wipe Up' },
-  { value: 'wipeDown', label: 'Wipe Down' },
-  { value: 'reveal', label: 'Reveal' }
+  { value: 'zoom', label: 'Zoom' }
 ]
 
 // Subtitle styles
 const SUBTITLE_STYLES = [
-  { key: 'Standard', value: 'standard' },
+  { key: 'Future', value: 'future' },
   { key: 'Minimal', value: 'minimal' },
-  { key: 'Bold', value: 'bold' }
+  { key: 'Skinny', value: 'skinny' }
 ]
 
 // Subtitle positions
@@ -116,6 +112,7 @@ const MUSIC_STYLES = [
       'https://res.cloudinary.com/dprxfw51q/video/upload/v1744904312/video_gen_ai/zjgb91wkqeqnqtpcyuqq.mp4'
   }
 ]
+
 export default function VideoEditor({
   onComplete
 }: {
@@ -124,20 +121,22 @@ export default function VideoEditor({
   const [activeTab, setActiveTab] = useState('timeline')
   const [autoSubtitles, setAutoSubtitles] = useState(true)
   const [backgroundMusic, setBackgroundMusic] = useState(true)
-  const [musicVolume, setMusicVolume] = useState([70])
   const [isPreviewReady, setIsPreviewReady] = useState(false)
   const [isEditorComplete, setIsEditorComplete] = useState(false)
   const { story, images, mp3_url } = useGenerationStore()
   const [media_items, setMediaItems] = useState<MediaItem[]>([])
+  const [previewVideoUrl, setPreviewVideoUrl] = useState<string>('')
+  const [previewVideoError, setPreviewVideoError] = useState<string>('')
 
-  // Effect and audio settings
-  // const [subtitleStyle, setSubtitleStyle] = useState('standard')
-  // const [subtitlePosition, setSubtitlePosition] = useState('bottom')
-  // const [musicStyle, setMusicStyle] = useState('upbeat')
   const [effect, setEffect] = useState<Effect>({
-    subtitleStyle: 'standard',
+    subtitleStyle: 'future',
     subtitlePosition: 'bottom',
-    musicStyle: 'upbeat'
+    musicStyle: {
+      musicStyle: 'upbeat',
+      mp3Url:
+        'https://res.cloudinary.com/dprxfw51q/video/upload/v1744903851/video_gen_ai/v1y5pg3wdjstf5vhgw7x.mp4',
+      volume: 0
+    }
   })
 
   const [selectedEffects, setSelectedEffects] = useState<string[]>([])
@@ -147,6 +146,63 @@ export default function VideoEditor({
       ...prev,
       [key]: value
     }))
+  }
+
+  const [isMusicPlaying, setIsMusicPlaying] = useState(false)
+  const toggleBackgroundMusic = () => {
+    console.log('Toggle')
+
+    if (backgroundMusicRef.current) {
+      if (isMusicPlaying) {
+        backgroundMusicRef.current.pause()
+      } else {
+        backgroundMusicRef.current.src = effect.musicStyle.mp3Url
+        backgroundMusicRef.current.volume = effect.musicStyle.volume / 100
+        backgroundMusicRef.current.play()
+      }
+      setIsMusicPlaying(!isMusicPlaying)
+    } else {
+      console.log('nothing')
+    }
+  }
+
+  const backgroundMusicRef = useRef<HTMLAudioElement | null>(null)
+  const handleMusicStyleChange = (styleValue: string) => {
+    const selectedStyle = MUSIC_STYLES.find(style => style.value === styleValue)
+    if (selectedStyle) {
+      setEffect(prev => ({
+        ...prev,
+        musicStyle: {
+          ...prev.musicStyle,
+          musicStyle: styleValue,
+          mp3Url: selectedStyle.mp3_url
+        }
+      }))
+
+      if (isMusicPlaying && backgroundMusicRef.current) {
+        backgroundMusicRef.current.src = selectedStyle.mp3_url
+        backgroundMusicRef.current.play()
+      }
+    }
+  }
+
+  useEffect(() => {
+    console.log('Volume', effect.musicStyle.volume)
+  }),
+    [effect.musicStyle.volume]
+
+  const handleMusicVolumeChange = (value: number[]) => {
+    setEffect(prev => ({
+      ...prev,
+      musicStyle: {
+        ...prev.musicStyle,
+        volume: value[0]
+      }
+    }))
+
+    if (backgroundMusicRef.current) {
+      backgroundMusicRef.current.volume = value[0] / 100
+    }
   }
 
   // Render
@@ -162,6 +218,11 @@ export default function VideoEditor({
   useEffect(() => {
     if (renderData) {
       console.log('Video đã render xong:', renderData)
+      if (renderData.error !== '') {
+        setPreviewVideoError(renderData.error)
+        return
+      }
+      setPreviewVideoUrl(renderData.url)
     }
   }, [renderData])
 
@@ -177,6 +238,8 @@ export default function VideoEditor({
 
   useEffect(() => {
     const loadMediaItems = async () => {
+      console.log('Loading media items...', images)
+      console.log('Loading mp3 url...', mp3_url)
       const audioDurations = await Promise.all(
         mp3_url.map(url => getAudioDuration(url))
       )
@@ -200,19 +263,9 @@ export default function VideoEditor({
     }
     loadMediaItems()
   }, [images, mp3_url, story])
-
-  useEffect(() => {
-    console.log('Media items:', media_items)
-  }, [media_items])
-
-  // Timeline items state
-  // const [timelineItems, setTimelineItems] = useState<any[]>([])
-  // const [transitions, setTransitions] = useState<{ [key: string]: string }>({})
-  // Audio playback state
   const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
-  // Calculate total duration
   const totalDuration = 10
 
   // Update completion status when editor is complete
@@ -226,6 +279,25 @@ export default function VideoEditor({
     setIsEditorComplete(true)
   }
 
+  useEffect(() => {
+    if (!backgroundMusic) return
+
+    const selectedMusic = MUSIC_STYLES.find(
+      style => style.value === effect.musicStyle.musicStyle
+    )
+
+    if (!selectedMusic) return
+
+    if (selectedMusic.mp3_url !== effect.musicStyle.mp3Url) {
+      setEffect(prev => ({
+        ...prev,
+        musicStyle: {
+          ...prev.musicStyle,
+          mp3Url: selectedMusic.mp3_url
+        }
+      }))
+    }
+  }, [backgroundMusic, effect.musicStyle.musicStyle])
   const handleDragEnd = (result: any) => {
     if (!result.destination) return
 
@@ -288,7 +360,8 @@ export default function VideoEditor({
         Arrange your images and audio, add transitions, and customize your video
         before publishing.
       </p>
-
+      {/* Add a hidden audio element for background music */}
+      <audio ref={backgroundMusicRef} loop className='hidden' />
       {/* Hidden audio element for playback */}
       <audio ref={audioRef} onEnded={handleAudioEnded} className='hidden' />
 
@@ -456,7 +529,7 @@ export default function VideoEditor({
                           <Select
                             value={item.transitionOut || 'none'}
                             onValueChange={value =>
-                              updateTransitionEffect(item.id, 'in', value)
+                              updateTransitionEffect(item.id, 'out', value)
                             }
                           >
                             <SelectTrigger>
@@ -574,12 +647,12 @@ export default function VideoEditor({
                             <div
                               key={style.value}
                               className={`cursor-pointer rounded-md border p-2 text-center text-xs ${
-                                effect.musicStyle === style.value
+                                effect.musicStyle.musicStyle === style.value
                                   ? 'border-primary bg-primary/10'
                                   : 'hover:bg-muted/50'
                               }`}
                               onClick={() =>
-                                updateEffect('musicStyle', style.value)
+                                handleMusicStyleChange(style.value)
                               }
                             >
                               {style.key}
@@ -587,16 +660,58 @@ export default function VideoEditor({
                           ))}
                         </div>
 
+                        <div className='mb-2 flex items-center justify-between'>
+                          <Button
+                            variant='outline'
+                            size='sm'
+                            onClick={toggleBackgroundMusic}
+                            className='flex items-center space-x-2'
+                          >
+                            {isMusicPlaying ? (
+                              <>
+                                <Pause className='h-4 w-4' />
+                                <span>Pause</span>
+                                <span className='ml-2 flex space-x-1'>
+                                  <span
+                                    className={`inline-block h-3 w-1 animate-pulse rounded-full bg-primary`}
+                                    style={{ animationDelay: '0ms' }}
+                                  ></span>
+                                  <span
+                                    className={`inline-block h-4 w-1 animate-pulse rounded-full bg-primary`}
+                                    style={{ animationDelay: '150ms' }}
+                                  ></span>
+                                  <span
+                                    className={`inline-block h-2 w-1 animate-pulse rounded-full bg-primary`}
+                                    style={{ animationDelay: '300ms' }}
+                                  ></span>
+                                  <span
+                                    className={`inline-block h-5 w-1 animate-pulse rounded-full bg-primary`}
+                                    style={{ animationDelay: '450ms' }}
+                                  ></span>
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <Play className='h-4 w-4' />
+                                <span>Play</span>
+                              </>
+                            )}
+                          </Button>
+                          <span className='text-xs text-muted-foreground'>
+                            {effect.musicStyle.musicStyle}
+                          </span>
+                        </div>
+
                         <div>
                           <div className='mb-1 flex justify-between'>
                             <Label className='text-xs'>Volume</Label>
                             <span className='text-xs text-muted-foreground'>
-                              {musicVolume[0]}%
+                              {effect.musicStyle.volume}%
                             </span>
                           </div>
                           <Slider
-                            value={musicVolume}
-                            onValueChange={setMusicVolume}
+                            value={[effect.musicStyle.volume]}
+                            onValueChange={handleMusicVolumeChange}
                             min={0}
                             max={100}
                             step={5}
@@ -655,28 +770,46 @@ export default function VideoEditor({
           <div className='space-y-6'>
             <div className='overflow-hidden rounded-md border'>
               <div className='flex aspect-video items-center justify-center bg-muted'>
-                <div className='text-center'>
-                  <Video className='mx-auto h-12 w-12 text-muted-foreground' />
-                  <p className='mt-2 text-muted-foreground'>Video Preview</p>
-                  {!isPreviewReady && (
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      className='mt-4 flex items-center gap-2'
-                      // onClick={startRender}
-                      disabled={isRendering}
-                    >
-                      {isRendering ? (
-                        <>
-                          <Loader2 className='h-4 w-4 animate-spin' />
-                          Generating Video...
-                        </>
-                      ) : (
-                        'Generate Video'
-                      )}
-                    </Button>
-                  )}
-                </div>
+                {previewVideoUrl && !previewVideoError ? (
+                  <video
+                    className='h-full w-full object-contain'
+                    controls
+                    src={previewVideoUrl}
+                    onError={() =>
+                      setPreviewVideoError('Failed to load video.')
+                    }
+                  />
+                ) : previewVideoError ? (
+                  <div className='px-4 text-center'>
+                    <Video className='mx-auto h-12 w-12 text-red-500' />
+                    <p className='mt-2 text-sm text-red-600'>
+                      {previewVideoError}
+                    </p>
+                  </div>
+                ) : (
+                  <div className='text-center'>
+                    <Video className='mx-auto h-12 w-12 text-muted-foreground' />
+                    <p className='mt-2 text-muted-foreground'>Video Preview</p>
+                    {!isPreviewReady && (
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        className='mt-4 flex items-center gap-2'
+                        onClick={startRender}
+                        disabled={isRendering}
+                      >
+                        {isRendering ? (
+                          <>
+                            <Loader2 className='h-4 w-4 animate-spin' />
+                            Generating Video...
+                          </>
+                        ) : (
+                          'Generate Video'
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
 
               {isPreviewReady && (

@@ -35,10 +35,11 @@ import { Slider } from '@/components/ui/slider'
 import axios from 'axios'
 import { useGenerationStore } from '@/store/useGenerationStore'
 import { Scene } from '@/app/utils/type'
-interface ImageVideoGeneratorProps {
-  scenes: Scene[]
-  onComplete?: () => void
-}
+// import { Scene } from '@/app/utils/type'
+// interface ImageVideoGeneratorProps {
+//   scenes: Scene[]
+//   onComplete?: () => void
+// }
 
 const IMAGE_STYLES = [
   {
@@ -74,23 +75,25 @@ const IMAGE_STYLES = [
 ]
 
 export default function ImageVideoGenerator({
-  onComplete = () => {}
-}: ImageVideoGeneratorProps) {
+  onComplete
+}: {
+  onComplete: () => void
+}) {
   const [activeTab, setActiveTab] = useState('generate')
   const [imageStyle, setImageStyle] = useState('sketch')
-  const [aspectRatio, setAspectRatio] = useState('16:9')
   const [isGenerating, setIsGenerating] = useState(false)
   const [isRegenerating, setIsRegenerating] = useState<number | null>(null)
   const [imageCreated, setImageCreated] = useState(false)
+  const [isImageGenerateComplete, setIsImageGenerateComplete] = useState(false)
 
   const { story, setImages } = useGenerationStore()
+  const [isUploading, setIsUploading] = useState(false)
 
   // Screen-based image generation
   const [scriptScreens, setScriptScreens] = useState(story.scenes)
   const [screenImages, setScreenImages] = useState<{
     [screenId: number]: string
   }>({})
-  const [selectedScreen, setSelectedScreen] = useState<number | null>(null)
   const [currentEditingScreen, setCurrentEditingScreen] = useState<
     number | null
   >(null)
@@ -108,14 +111,66 @@ export default function ImageVideoGenerator({
   const [editingScriptText, setEditingScriptText] = useState<string>('')
   const [generationError, setGenerationError] = useState<string | null>(null)
 
+  // Approve Images and push on Cloudinary
+  const [imagesApproved, setImagesApproved] = useState(false)
+  const handleApproveImages = () => {
+    if (imageCreated && !isUploading) {
+      setIsUploading(true)
+
+      const uploadAllImages = async () => {
+        try {
+          const base64List = Object.values(screenImages)
+          const uploadedImageUrls = await uploadImagesToCloudinary(base64List)
+
+          console.log('Finish uploading')
+          setImages(uploadedImageUrls)
+          setImagesApproved(true)
+          setIsImageGenerateComplete(true)
+        } catch (error) {
+          console.error('Error uploading images:', error)
+        } finally {
+          setIsUploading(false)
+        }
+      }
+
+      uploadAllImages()
+    }
+  }
+
   // Update completion status when all screens have images and video is created
   useEffect(() => {
-    if (imageCreated) {      
-      setImages(Object.values(screenImages))
-
+    if (isImageGenerateComplete) {
       onComplete()
     }
-  }, [imageCreated, onComplete])
+  }, [isImageGenerateComplete, onComplete])
+
+  useEffect(() => {
+    console.log('Generate compelet', isImageGenerateComplete)
+  }),
+    [isImageGenerateComplete]
+
+  const uploadImagesToCloudinary = async (
+    base64Images: string[]
+  ): Promise<string[]> => {
+    const uploadedUrls: string[] = []
+
+    for (const base64Image of base64Images) {
+      try {
+        const response = await axios.post('/api/upload/image', {
+          base64Image: base64Image
+        })
+
+        console.log('Upload response:', response.data) //khong in ra
+        uploadedUrls.push(response.data.url)
+      } catch (error) {
+        console.error('Upload failed for one image:', error)
+        uploadedUrls.push('')
+      }
+    }
+    console.log('Uploaded URLs:', uploadedUrls)
+
+    return uploadedUrls
+  }
 
   // Check if all screens have images
   const allScreensHaveImages = () => {
@@ -457,6 +512,33 @@ export default function ImageVideoGenerator({
                 ))}
               </div>
             </div>
+            <div className='mt-6'>
+              {imagesApproved || isUploading ? (
+                <div className='rounded-md border border-green-500 bg-green-50 p-4'>
+                  <div className='mb-2 flex items-center text-green-700'>
+                    <Check className='mr-2 h-5 w-5 animate-pulse' />
+                    <h3 className='font-medium'>
+                      {isUploading
+                        ? 'Images Approved & Uploading...'
+                        : 'Images Approved!'}
+                    </h3>
+                  </div>
+                  <p className='text-sm text-green-600'>
+                    {isUploading
+                      ? 'Images have been approved and are being pushed to Cloudinary...'
+                      : 'All images have been approved and pushed to Cloudinary. Now you can create video creation.'}
+                  </p>
+                </div>
+              ) : (
+                <Button
+                  onClick={handleApproveImages}
+                  disabled={!allScreensHaveImages() || isUploading}
+                  className='w-full'
+                >
+                  Approve All Images
+                </Button>
+              )}
+            </div>
 
             <div className='flex justify-between'>
               <Button
@@ -465,12 +547,6 @@ export default function ImageVideoGenerator({
               >
                 Back to Generate
               </Button>
-              {/* <Button
-                onClick={() => setActiveTab('video')}
-                disabled={!allScreensHaveImages()}
-              >
-                Continue to Video Creation
-              </Button> */}
             </div>
           </div>
         </TabsContent>

@@ -9,6 +9,33 @@ interface ShotstackRenderOptions {
   pollInterval?: number // milliseconds
 }
 
+const MUSIC_STYLES = [
+  {
+    key: 'Upbeat',
+    value: 'upbeat',
+    mp3_url:
+      'https://res.cloudinary.com/dprxfw51q/video/upload/v1744903851/video_gen_ai/v1y5pg3wdjstf5vhgw7x.mp4'
+  },
+  {
+    key: 'Relaxing',
+    value: 'relaxing',
+    mp3_url:
+      'https://res.cloudinary.com/dprxfw51q/video/upload/v1744904125/video_gen_ai/kxcrij8plog8sypg2scu.mp4'
+  },
+  {
+    key: 'Dramatic',
+    value: 'dramatic',
+    mp3_url:
+      'https://res.cloudinary.com/dprxfw51q/video/upload/v1744904130/video_gen_ai/yup62s3kjrvn8c5umnoi.mp4'
+  },
+  {
+    key: 'Corporate',
+    value: 'corporate',
+    mp3_url:
+      'https://res.cloudinary.com/dprxfw51q/video/upload/v1744904312/video_gen_ai/zjgb91wkqeqnqtpcyuqq.mp4'
+  }
+]
+
 export default function useShotstackRender(
   mediaItems: MediaItem[],
   effect: Effect,
@@ -29,21 +56,31 @@ export default function useShotstackRender(
     'https://api.shotstack.io/stage'
   const pollInterval = options.pollInterval || 5000
 
-  const createTimeline = (items: MediaItem[]) => {
+  const createTimeline = (items: MediaItem[], effect: Effect) => {
     const tracks = [
       {
-        clips: items.map(item => ({
-          asset: {
-            type: 'image',
-            src: item.image,
-            transition: {
-              in: item.transitionIn,
-              out: item.transitionOut
-            }
-          },
-          start: 0,
-          length: item.duration
-        }))
+        // Track hình ảnh
+        clips: items.map((item, index) => {
+          const clip = {
+            asset: {
+              type: 'image',
+              src: item.image
+            },
+            start: 0,
+            length: item.duration
+          }
+
+          if (item.transitionIn !== 'none' || item.transitionOut !== 'none') {
+            const transition: any = {}
+            if (item.transitionIn !== 'none') transition.in = item.transitionIn
+            if (item.transitionOut !== 'none')
+              transition.out = item.transitionOut
+
+            Object.assign(clip, { transition })
+          }
+
+          return clip
+        })
       },
       {
         clips: items.map(item => ({
@@ -56,24 +93,41 @@ export default function useShotstackRender(
         }))
       },
       {
+        // Track caption
         clips: items.map(item => ({
           asset: {
             type: 'title',
             text: item.title,
-            style: 'minimal'
+            style: effect.subtitleStyle
           },
           start: 0,
           length: item.duration,
-          position: 'bottom'
+          position: effect.subtitlePosition
         }))
       }
     ]
 
+    // Thêm track nhạc nền từ effect.musicStyle
+
+    tracks.push({
+      clips: [
+        {
+          asset: {
+            type: 'audio',
+            src: effect.musicStyle.mp3Url,
+            volume: 0.3 * (effect.musicStyle.volume / 100)
+          } as any,
+          start: 0,
+          length: items.reduce((total, item) => total + item.duration, 0)
+        }
+      ]
+    })
+
     let currentTime = 0
     for (let i = 0; i < items.length; i++) {
-      tracks.forEach(track => {
-        track.clips[i].start = currentTime
-      })
+      for (let t = 0; t < Math.min(tracks.length, 3); t++) {
+        tracks[t].clips[i].start = currentTime
+      }
       currentTime += items[i].duration
     }
 
@@ -88,9 +142,12 @@ export default function useShotstackRender(
     }
   }
 
-  // Hàm gửi yêu cầu render
   const startRender = async () => {
     if (!mediaItems.length || isRendering) return
+    console.log('Render media items: ', mediaItems)
+    console.log('Render effect', effect)
+    const requestBody = createTimeline(mediaItems, effect)
+    console.log('Body', requestBody)
 
     try {
       setIsRendering(true)
@@ -99,7 +156,8 @@ export default function useShotstackRender(
       setRenderStatus('submitting')
       setRenderProgress(0)
 
-      const requestBody = createTimeline(mediaItems)
+      const requestBody = createTimeline(mediaItems, effect)
+      console.log('Body', requestBody)
       const response = await axios.post(`${apiUrl}/render`, requestBody, {
         headers: {
           'Content-Type': 'application/json',
@@ -124,7 +182,6 @@ export default function useShotstackRender(
     }
   }
 
-  // Hàm kiểm tra trạng thái render
   const checkRenderStatus = async (id: string) => {
     try {
       const response = await axios.get(`${apiUrl}/render/${id}`, {

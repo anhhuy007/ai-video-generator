@@ -70,7 +70,13 @@ type MediaItem = {
 type Effect = {
   subtitleStyle: string
   subtitlePosition: string
+  musicStyle: BackgroundMusic
+}
+
+type BackgroundMusic = {
   musicStyle: string
+  mp3Url: string
+  volume: number
 }
 
 export type {

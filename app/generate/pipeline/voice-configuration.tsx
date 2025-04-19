@@ -68,7 +68,7 @@ export default function VoiceConfiguration({
   const [isConfigurationComplete, setIsConfigurationComplete] = useState(false)
   const [uploadedUrl, setUploadedUrl] = useState('')
   const [isUploading, setIsUploading] = useState(false)
-  const { story, setMp3Url } = useGenerationStore() // Lấy story từ store và thêm setAudioUrl
+  const { story, setMp3Url } = useGenerationStore()
 
   // Fetch voices from ElevenLabs API
   useEffect(() => {
@@ -110,7 +110,7 @@ export default function VoiceConfiguration({
   const handlePreviewVoice = async () => {
     if (!selectedVoiceId) return
 
-    setIsPlaying(true)
+    setIsUploading(true)
     try {
       const res = await axios.post(
         '/api/conversations',
@@ -138,12 +138,11 @@ export default function VoiceConfiguration({
       audio.play()
     } catch (error) {
       console.error('Error previewing voice:', error)
-      setIsPlaying(false)
+      setIsUploading(false)
     }
   }
 
-  const uploadAudioToCloudinary = async (audioBlob: Blob) => {
-    setIsUploading(true)
+  const uploadAudioToCloudinary = async (audioBlob: Blob): Promise<string> => {
     try {
       const file = new File([audioBlob], 'narration.mp4', { type: 'audio/mp4' })
 
@@ -151,87 +150,60 @@ export default function VoiceConfiguration({
       formData.append('file', file)
 
       const response = await axios.post('/api/upload', formData)
-
       const uploadedFileUrl = response.data.url
-      setUploadedUrl(uploadedFileUrl)
-
-      if (setMp3Url) {
-        setMp3Url(uploadedFileUrl)
-      }
 
       console.log('Uploaded successfully:', uploadedFileUrl)
       return uploadedFileUrl
     } catch (error) {
       console.error('Error uploading audio:', error)
       throw error
-    } finally {
-      setIsUploading(false)
     }
   }
 
-  // const handleComplete = async () => {
-  //   if (!selectedVoiceId || !story) {
-  //     console.error('No story or voice selected.')
-  //     return
-  //   }
-
-  //   // Trích xuất script từ story
-  //   const script = story.scenes
-  //     ?.map(scene => `# ${scene.title}\n${scene.narration}`)
-  //     .join('\n\n')
-
-  //   const configuration = {
-  //     text: script, // Sử dụng script từ story
-  //     voice: getSelectedVoiceName(),
-  //     speed: Number.parseFloat(speed),
-  //     stability: Number.parseFloat(stability),
-  //     style: Number.parseFloat(style)
-  //   }
-
-  //   try {
-  //     const response = await axios.post(
-  //       '/api/generation/voice',
-  //       configuration,
-  //       {
-  //         responseType: 'blob'
-  //       }
-  //     )
-
-  //     const audioBlob = response.data
-  //     const url = URL.createObjectURL(audioBlob)
-  //     const audio = new Audio(url)
-
-  //     audio.onended = () => {
-  //       setIsPlaying(false)
-  //       URL.revokeObjectURL(url)
-  //     }
-
-  //     // Upload file lên Cloudinary
-  //     await uploadAudioToCloudinary(audioBlob)
-
-  //     audio.play()
-
-  //     setIsConfigurationComplete(true)
-  //   } catch (error) {
-  //     console.error('Error applying voice configuration:', error)
-  //   }
-  //   setIsConfigurationComplete
-  // }
-
-  const handleComplete = () => {
-    if (!selectedVoiceId) return
-
-    // Save the configuration
-    const configuration = {
-      voiceId: selectedVoiceId,
-      voiceName: getSelectedVoiceName(),
-      speed: Number.parseFloat(speed),
-      stability: Number.parseFloat(stability),
-      style: Number.parseFloat(style)
+  const handleComplete = async () => {
+    if (!selectedVoiceId || !story) {
+      console.error('No story or voice selected.')
+      return
     }
 
-    console.log('Voice configuration saved:', configuration)
-    setIsConfigurationComplete(true)
+    setIsUploading(true)
+
+    try {
+      const uploadedUrls: string[] = []
+
+      for (const scene of story.scenes || []) {
+        const script = `# ${scene.title}\n${scene.narration}`
+
+        const configuration = {
+          text: script,
+          voice: getSelectedVoiceName(),
+          speed: Number.parseFloat(speed),
+          stability: Number.parseFloat(stability),
+          style: Number.parseFloat(style)
+        }
+
+        const response = await axios.post(
+          '/api/generation/voice',
+          configuration,
+          {
+            responseType: 'blob'
+          }
+        )
+
+        const audioBlob = response.data
+        const uploadedUrl = await uploadAudioToCloudinary(audioBlob)
+        uploadedUrls.push(uploadedUrl)
+      }
+
+      if (setMp3Url) {
+        setMp3Url(uploadedUrls)
+      }
+
+      setIsUploading(false)
+      setIsConfigurationComplete(true)
+    } catch (error) {
+      console.error('Error generating scene audios:', error)
+    }
   }
 
   return (

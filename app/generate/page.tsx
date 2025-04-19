@@ -85,7 +85,10 @@ function GenerateSteps() {
             <div className='mb-8'>
               <div className='mb-4 flex items-center justify-between'>
                 {steps.map((step, index) => (
-                  <div key={step.id} className='mx-auto flex flex-col items-center'>
+                  <div
+                    key={step.id}
+                    className='mx-auto flex flex-col items-center'
+                  >
                     <div
                       className={`flex h-10 w-10 items-center justify-center rounded-full border-2 ${
                         activeStep === step.id
@@ -122,15 +125,18 @@ function GenerateSteps() {
             <Card className='space-y-6 p-4 md:p-6'>
               <Tabs value={activeStep} className='w-full'>
                 <TabsContent value='literary'>
-                  <LiteraryCreator onComplete={() => setLiteraryComplete(true)} />
+                  <LiteraryCreator
+                    onComplete={() => setLiteraryComplete(true)}
+                  />
                 </TabsContent>
                 <TabsContent value='voice'>
-                  <VoiceConfiguration onComplete={() => setVoiceComplete(true)} />
+                  <VoiceConfiguration
+                    onComplete={() => setVoiceComplete(true)}
+                  />
                 </TabsContent>
                 <TabsContent value='images'>
                   <ImageVideoGenerator
                     onComplete={() => setImagesComplete(true)}
-                    scenes={[]}
                   />
                 </TabsContent>
                 <TabsContent value='video-editor'>
