@@ -2,8 +2,16 @@
 
 import { sql } from '@/app/utils/database'
 
+// Add this new function
+export async function getUserById(userId: string) {
+  const result = await sql`
+    SELECT * FROM users
+    WHERE id = ${userId};
+  `
+  return result[0]
+}
 
-
+// Existing functions
 export async function createGoogleUser(
   googleId: string,
   email: string,
@@ -56,7 +64,6 @@ export async function updateUser(
   `
   return result[0]
 }
-
 
 export async function deleteUser(userId: string) {
   const result = await sql`
