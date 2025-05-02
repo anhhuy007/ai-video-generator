@@ -43,17 +43,10 @@ export default function VideoDetailView({
           <video
             src={galleryEntry.video_url}
             controls
-            className='h-auto w-full'
+            className='max-h-[500px] w-full object-contain'
             onPlay={() => setIsPlaying(true)}
             onPause={() => setIsPlaying(false)}
           />
-        </div>
-
-        <div className='mt-4'>
-          <h2 className='text-2xl font-bold'>{galleryEntry.title}</h2>
-          <p className='mt-2 text-gray-600'>
-            Đăng tải vào {formatDate(galleryEntry.created_at)}
-          </p>
         </div>
       </div>
 

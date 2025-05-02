@@ -103,18 +103,7 @@ export default function VideoList() {
   }
 
   return (
-    <div>
-      {/* Hiển thị User ID */}
-      <div className='mb-4 rounded-md border border-blue-200 bg-blue-50 p-3'>
-        <p className='font-semibold'>
-          User ID đang xem: <span className='text-blue-600'>{userId}</span>
-        </p>
-      </div>
-
-      <h2 className='mb-4 text-xl font-semibold'>
-        Lịch sử video ({genHistories.length})
-      </h2>
-
+    <div className='h-full overflow-y-auto pb-6'>
       {genHistories.length === 0 ? (
         <div className='py-6 text-center'>
           Không tìm thấy lịch sử video nào cho tài khoản này.
