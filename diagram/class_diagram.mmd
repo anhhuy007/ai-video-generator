@@ -1,0 +1,40 @@
+classDiagram
+
+class User {
+  +String id
+  +String google_id
+  +String email
+  +String name
+  +String avatar_url
+}
+
+class Gallery {
+  +String id
+  +String video_url
+  +String title
+  +String added_by
+  +Date created_at
+  +Number duration
+  +String quality
+}
+
+class GenHistory {
+  +String id
+  +String prompt
+  +String user_id
+  +String gallery_id
+  +Date created_at
+}
+
+class Statistics {
+  +daily: List
+  +weekly: List
+  +monthly: List
+  +qualityDistribution: List
+}
+
+User "1" --> "*" Gallery : added_by
+User "1" --> "*" GenHistory : user_id
+Gallery "1" --> "*" GenHistory : gallery_id
+User "1" --> "1" Statistics : stats for
+
