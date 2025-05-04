@@ -21,8 +21,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'prompt is required' }, { status: 400 })
     }
 
-    const userId = session.user.id
-    const historyEntry = await createGenHistory(userId, prompt, galleryId)
+    // Use the Google ID from the session
+    const googleId = session.user.id
+    const historyEntry = await createGenHistory(googleId, prompt, galleryId)
     return NextResponse.json({ historyEntry }, { status: 201 })
   } catch (error) {
     console.error('Error creating gen history:', error)
@@ -40,10 +41,9 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    console.log('--------------session', session.user.id)
-
-    const userId = session.user.id
-    const historyEntries = await getGenHistoryForUser(userId)
+    // Use the Google ID from the session
+    const googleId = session.user.id
+    const historyEntries = await getGenHistoryForUser(googleId)
     return NextResponse.json({ historyEntries }, { status: 200 })
   } catch (error) {
     console.error('Error fetching gen history:', error)

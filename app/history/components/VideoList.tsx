@@ -2,6 +2,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
+import Link from 'next/link'
 
 interface GenHistory {
   id: string
@@ -102,18 +103,7 @@ export default function VideoList() {
   }
 
   return (
-    <div>
-      {/* Hiển thị User ID */}
-      <div className='mb-4 rounded-md border border-blue-200 bg-blue-50 p-3'>
-        <p className='font-semibold'>
-          User ID đang xem: <span className='text-blue-600'>{userId}</span>
-        </p>
-      </div>
-
-      <h2 className='mb-4 text-xl font-semibold'>
-        Lịch sử video ({genHistories.length})
-      </h2>
-
+    <div className='h-full overflow-y-auto pb-6'>
       {genHistories.length === 0 ? (
         <div className='py-6 text-center'>
           Không tìm thấy lịch sử video nào cho tài khoản này.
@@ -125,41 +115,32 @@ export default function VideoList() {
               ? galleryEntries[history.gallery_id]
               : null
 
+            if (!galleryEntry) return null
+
             return (
-              <div
+              <Link
                 key={history.id}
-                className='overflow-hidden rounded-lg bg-white shadow-md'
+                href={`/video/${galleryEntry.id}`}
+                className='block overflow-hidden rounded-lg bg-white shadow transition-shadow hover:shadow-md'
               >
-                {galleryEntry && (
-                  <div className='aspect-video'>
-                    <video
-                      src={galleryEntry.video_url}
-                      controls
-                      className='h-full w-full object-cover'
-                    />
-                  </div>
-                )}
-
-                <div className='p-4'>
-                  <h3 className='mb-2 text-lg font-bold'>
-                    {galleryEntry ? galleryEntry.title : 'Video chưa được tạo'}
-                  </h3>
-
-                  <div className='mb-2 text-sm text-gray-600'>
-                    <p>
-                      Ngày tạo:{' '}
-                      {new Date(history.created_at).toLocaleDateString('vi-VN')}
-                    </p>
-                  </div>
-
-                  <div className='mt-3'>
-                    <p className='text-sm text-gray-700'>
-                      <span className='font-semibold'>Prompt:</span>{' '}
-                      {history.prompt}
-                    </p>
-                  </div>
+                <div className='aspect-video'>
+                  <video
+                    src={galleryEntry.video_url}
+                    muted
+                    className='h-full w-full object-cover'
+                    onMouseOver={e => e.currentTarget.play()}
+                    onMouseOut={e => {
+                      e.currentTarget.pause()
+                      e.currentTarget.currentTime = 0
+                    }}
+                  />
                 </div>
-              </div>
+                <div className='p-3'>
+                  <h3 className='truncate text-base font-medium'>
+                    {galleryEntry.title}
+                  </h3>
+                </div>
+              </Link>
             )
           })}
         </div>

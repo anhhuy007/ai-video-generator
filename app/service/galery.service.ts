@@ -5,16 +5,15 @@ import { sql } from '@/app/utils/database'
 export async function createGalleryEntry(
   videoUrl: string,
   title: string,
-  addedBy: string
+  userId: string
 ) {
   const result = await sql`
     INSERT INTO gallery (video_url, title, added_by)
-    VALUES (${videoUrl}, ${title}, ${addedBy})
+    VALUES (${videoUrl}, ${title}, ${userId})
     RETURNING *;
   `
   return result[0]
 }
-
 
 export async function getGalleryEntries() {
   const result = await sql`

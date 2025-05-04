@@ -1,9 +1,10 @@
 // app/create-video/components/VideoForm.tsx
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 
 export default function VideoForm() {
-  const [userId, setUserId] = useState<string>('')
+  const { data: session } = useSession()
   const [file, setFile] = useState<File | null>(null)
   const [videoUrl, setVideoUrl] = useState<string>('')
   const [prompt, setPrompt] = useState<string>('')
@@ -23,9 +24,9 @@ export default function VideoForm() {
     setError('')
     setSuccessMessage('')
 
-    // Kiểm tra các trường bắt buộc
-    if (!userId) {
-      setError('Vui lòng nhập User ID')
+    // Check for session/authentication
+    if (!session?.user?.id) {
+      setError('Vui lòng đăng nhập để tạo video')
       return
     }
 
@@ -81,8 +82,8 @@ export default function VideoForm() {
         },
         body: JSON.stringify({
           videoUrl: uploadData.url,
-          title: title,
-          addedBy: userId
+          title: title
+          // userId is handled by the server from session
         })
       })
 
@@ -99,9 +100,9 @@ export default function VideoForm() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          userId: userId,
           prompt: prompt,
           galleryId: galleryData.galleryEntry.id
+          // googleId is handled by the server from session
         })
       })
 
@@ -142,23 +143,11 @@ export default function VideoForm() {
         </div>
       )}
 
-      <div className='mb-4'>
-        <label
-          className='mb-2 block text-sm font-bold text-gray-700'
-          htmlFor='userId'
-        >
-          User ID *
-        </label>
-        <input
-          id='userId'
-          type='text'
-          placeholder='Nhập User ID'
-          value={userId}
-          onChange={e => setUserId(e.target.value)}
-          className='focus:shadow-outline w-full appearance-none rounded border px-3 py-2 leading-tight text-gray-700 shadow focus:outline-none'
-          required
-        />
-      </div>
+      {!session?.user?.id && (
+        <div className='mb-4 rounded border border-yellow-400 bg-yellow-100 px-4 py-3 text-yellow-700'>
+          Bạn cần đăng nhập để tạo video
+        </div>
+      )}
 
       <div className='mb-4'>
         <label
@@ -231,8 +220,8 @@ export default function VideoForm() {
       <div className='flex items-center justify-between'>
         <button
           type='submit'
-          disabled={uploading}
-          className='focus:shadow-outline rounded bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-700 focus:outline-none'
+          disabled={uploading || !session?.user?.id}
+          className='focus:shadow-outline rounded bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-700 focus:outline-none disabled:bg-gray-400'
         >
           {uploading ? 'Đang xử lý...' : 'Tạo video'}
         </button>
