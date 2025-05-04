@@ -15,7 +15,7 @@ import Publishing from '@/app/generate/pipeline/publishing'
 import { ScriptProvider } from '@/app/context/ScriptContext'
 import { SidebarProvider } from '@/components/ui/sidebar'
 import { DashboardSidebar } from '../dashboard/components/sidebar'
-// import { DashboardHeader } from '../dashboard/components/header'
+import { DashboardHeader } from '../dashboard/components/header'
 
 export default function GeneratePage() {
   return (
@@ -33,12 +33,14 @@ function GenerateSteps() {
   const [voiceComplete, setVoiceComplete] = useState(false)
   const [imagesComplete, setImagesComplete] = useState(false)
   const [editorComplete, setEditorComplete] = useState(false)
+  const [publishComplete, setPublishComplete] = useState(false)
 
   const steps = [
     { id: 'literary', label: 'Literary Content' },
     { id: 'voice', label: 'Voice Config' },
     { id: 'images', label: 'Images & Video' },
-    { id: 'video-editor', label: 'Video Editor' }
+    { id: 'video-editor', label: 'Video Editor' },
+    { id: 'publish', label: 'Publishing' }
   ]
 
   const currentStepIndex = steps.findIndex(step => step.id === activeStep)
@@ -68,6 +70,8 @@ function GenerateSteps() {
         return imagesComplete
       case 'video-editor':
         return editorComplete
+      case 'publish':
+        return publishComplete
       default:
         return false
     }
@@ -142,8 +146,11 @@ function GenerateSteps() {
                 <TabsContent value='video-editor'>
                   <VideoEditor onComplete={() => setEditorComplete(true)} />
                 </TabsContent>
+                <TabsContent value='publish'>
+                  <Publishing onComplete={() => setPublishComplete(true)} />
+                </TabsContent>
               </Tabs>
-
+              {/* 
               <div className='mt-8 flex justify-between'>
                 <Button
                   variant='outline'
@@ -153,7 +160,7 @@ function GenerateSteps() {
                   <ArrowLeft className='mr-2 h-4 w-4' /> Previous
                 </Button>
 
-                {activeStep !== 'video-editor' ? (
+                {activeStep !== 'publishr' ? (
                   <Button
                     onClick={handleNext}
                     disabled={!isCurrentStepComplete()}
@@ -162,6 +169,26 @@ function GenerateSteps() {
                   </Button>
                 ) : (
                   <Button disabled={!editorComplete}>Finish</Button>
+                )}
+              </div> */}
+              <div className='mt-8 flex justify-between'>
+                <Button
+                  variant='outline'
+                  onClick={handlePrevious}
+                  disabled={currentStepIndex === 0}
+                >
+                  <ArrowLeft className='mr-2 h-4 w-4' /> Previous
+                </Button>
+
+                {activeStep !== 'publish' ? (
+                  <Button
+                    onClick={handleNext}
+                    disabled={!isCurrentStepComplete()}
+                  >
+                    Next <ArrowRight className='ml-2 h-4 w-4' />
+                  </Button>
+                ) : (
+                  <Button disabled={!publishComplete}>Finish</Button>
                 )}
               </div>
             </Card>

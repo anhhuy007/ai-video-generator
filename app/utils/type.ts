@@ -79,6 +79,40 @@ type BackgroundMusic = {
   volume: number
 }
 
+export interface Publication {
+  _id?: string
+  videoUrl: string
+  title: string
+  description: string
+  tags: string
+  platforms: PlatformResults
+  publishedAt: Date
+  userId: string
+}
+
+export interface PlatformResults {
+  [key: string]: PlatformResult
+}
+
+export interface PlatformResult {
+  success: boolean
+  data?: any
+  error?: string
+}
+
+export interface PublishOptions {
+  videoUrl: string
+  title: string
+  description: string
+  tags: string
+  platforms: string[]
+}
+
+export interface PublishResult {
+  overall: boolean
+  platforms: PlatformResults
+}
+
 export type {
   User,
   Session,

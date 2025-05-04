@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { Check, Play, Info } from 'lucide-react'
+import { Check, Play, Info, Pause } from 'lucide-react'
 import { useGenerationStore } from '@/store/useGenerationStore'
 import {
   Select,
@@ -20,6 +20,8 @@ import {
 } from '@/components/ui/tooltip'
 import axios from 'axios'
 import { elevenlabs } from '@/lib/elevenlabs'
+import { Card, CardContent } from '@/components/ui/card'
+import { Slider } from '@/components/ui/slider'
 
 // Define options for speed, stability and style
 const SPEED_OPTIONS = [
@@ -53,6 +55,14 @@ interface Voice {
   name: string
 }
 
+interface Mp3Url {
+  id: number
+  title: string
+  content: string
+  audioUrl: string
+  duration: number
+}
+
 export default function VoiceConfiguration({
   onComplete
 }: {
@@ -66,9 +76,14 @@ export default function VoiceConfiguration({
   const [isPlaying, setIsPlaying] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isConfigurationComplete, setIsConfigurationComplete] = useState(false)
-  const [uploadedUrl, setUploadedUrl] = useState('')
   const [isUploading, setIsUploading] = useState(false)
   const { story, setMp3Url } = useGenerationStore()
+  const [generatedAudioFiles, setGeneratedAudioFiles] = useState<Mp3Url[]>([])
+  const [currentlyPlaying, setCurrentlyPlaying] = useState<number | null>(null)
+  const [audioProgress, setAudioProgress] = useState<{ [key: number]: number }>(
+    {}
+  )
+  const audioRefs = useRef<{ [key: number]: HTMLAudioElement | null }>({})
 
   // Fetch voices from ElevenLabs API
   useEffect(() => {
@@ -105,41 +120,6 @@ export default function VoiceConfiguration({
   const getSelectedVoiceName = () => {
     const selectedVoice = voices.find(v => v.voice_id === selectedVoiceId)
     return selectedVoice?.name || ''
-  }
-
-  const handlePreviewVoice = async () => {
-    if (!selectedVoiceId) return
-
-    setIsUploading(true)
-    try {
-      const res = await axios.post(
-        '/api/conversations',
-        {
-          text: 'Đây là một đoạn văn bản mẫu để kiểm tra giọng nói.',
-          voice: getSelectedVoiceName(),
-          speed: Number.parseFloat(speed),
-          stability: Number.parseFloat(stability),
-          style: Number.parseFloat(style)
-        },
-        {
-          responseType: 'blob'
-        }
-      )
-
-      const audioBlob = res.data
-      const url = URL.createObjectURL(audioBlob)
-      const audio = new Audio(url)
-
-      audio.onended = () => {
-        setIsPlaying(false)
-        URL.revokeObjectURL(url)
-      }
-
-      audio.play()
-    } catch (error) {
-      console.error('Error previewing voice:', error)
-      setIsUploading(false)
-    }
   }
 
   const uploadAudioToCloudinary = async (audioBlob: Blob): Promise<string> => {
@@ -198,12 +178,103 @@ export default function VoiceConfiguration({
       if (setMp3Url) {
         setMp3Url(uploadedUrls)
       }
+      const newGeneratedFiles: Mp3Url[] = []
 
+      for (let i = 0; i < uploadedUrls.length; i++) {
+        const url = uploadedUrls[i]
+        const scene = story.scenes[i]
+
+        const duration = await getAudioDuration(url)
+
+        const mp3File: Mp3Url = {
+          id: scene.id,
+          title: scene.title,
+          content: scene.description,
+          audioUrl: url,
+          duration: duration
+        }
+
+        newGeneratedFiles.push(mp3File)
+      }
+
+      setGeneratedAudioFiles(newGeneratedFiles)
       setIsUploading(false)
       setIsConfigurationComplete(true)
     } catch (error) {
       console.error('Error generating scene audios:', error)
     }
+  }
+
+  const getAudioDuration = (url: string): Promise<number> => {
+    return new Promise(resolve => {
+      const audio = new Audio(url)
+      audio.addEventListener('loadedmetadata', () => {
+        resolve(audio.duration)
+      })
+      audio.addEventListener('error', () => {
+        resolve(0)
+      })
+    })
+  }
+
+  // Preview voice function
+  const handlePlayPause = (id: number) => {
+    if (currentlyPlaying === id) {
+      if (audioRefs.current[id]) {
+        audioRefs.current[id]?.pause()
+      }
+      setCurrentlyPlaying(null)
+      return
+    }
+
+    if (currentlyPlaying !== null && audioRefs.current[currentlyPlaying]) {
+      audioRefs.current[currentlyPlaying]?.pause()
+    }
+
+    if (audioRefs.current[id]) {
+      audioRefs.current[id]?.play()
+      setCurrentlyPlaying(id)
+    }
+  }
+
+  const handleAudioEnded = (id: number) => {
+    setCurrentlyPlaying(null)
+    setAudioProgress(prev => ({
+      ...prev,
+      [id]: 0
+    }))
+  }
+
+  const handleTimeUpdate = (id: number) => {
+    if (audioRefs.current[id]) {
+      const audio = audioRefs.current[id]
+      if (audio) {
+        const progress = (audio.currentTime / audio.duration) * 100
+        setAudioProgress(prev => ({
+          ...prev,
+          [id]: progress
+        }))
+      }
+    }
+  }
+
+  const handleSeek = (id: number, value: number[]) => {
+    if (audioRefs.current[id]) {
+      const audio = audioRefs.current[id]
+      if (audio) {
+        audio.currentTime = (value[0] / 100) * audio.duration
+        setAudioProgress(prev => ({
+          ...prev,
+          [id]: value[0]
+        }))
+      }
+    }
+  }
+
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60)
+    const remainingSeconds = Math.floor(seconds % 60)
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
   }
 
   return (
@@ -331,33 +402,13 @@ export default function VoiceConfiguration({
             </Select>
           </div>
 
-          {/* Preview and Apply */}
-          <div className='flex flex-col gap-3 pt-2 sm:flex-row'>
+          <div className='mt-6 flex'>
             <Button
-              variant='outline'
-              className='flex-1'
-              onClick={handlePreviewVoice}
-              disabled={isPlaying || !selectedVoiceId}
-            >
-              {isPlaying ? (
-                <span className='flex items-center'>
-                  <span className='mr-2 animate-pulse'>●</span>
-                  Playing...
-                </span>
-              ) : (
-                <>
-                  <Play className='mr-2 h-4 w-4' />
-                  Preview
-                </>
-              )}
-            </Button>
-
-            <Button
-              className='flex-1'
               onClick={handleComplete}
               disabled={
                 isConfigurationComplete || !selectedVoiceId || isUploading
               }
+              className='flex-1'
             >
               {isUploading ? (
                 <span className='flex items-center'>
@@ -367,22 +418,82 @@ export default function VoiceConfiguration({
               ) : isConfigurationComplete ? (
                 <>
                   <Check className='mr-2 h-4 w-4' />
-                  Applied
+                  Successfully Applied
                 </>
               ) : (
-                'Apply'
+                'Apply Changes and Upload MP3 to Cloudinary'
               )}
             </Button>
           </div>
 
-          {uploadedUrl && (
-            <div className='mt-4 rounded-md bg-slate-50 p-3'>
-              <p className='text-sm font-medium'>Đã tải lên thành công!</p>
-              <p className='break-all text-xs text-muted-foreground'>
-                {uploadedUrl}
-              </p>
+          <div>
+            <h3 className='mb-4 text-lg font-medium'>Generated Audio Files</h3>
+            <div className='space-y-4'>
+              {generatedAudioFiles.map(file => (
+                <Card key={file.id} className='overflow-hidden'>
+                  <CardContent className='p-4'>
+                    <div className='space-y-3'>
+                      <div className='flex items-center justify-between'>
+                        <h4 className='font-medium'>{file.title}</h4>
+                        <span className='text-xs text-muted-foreground'>
+                          {formatTime(file.duration)}
+                        </span>
+                      </div>
+
+                      <div className='flex items-center space-x-3'>
+                        <Button
+                          variant='outline'
+                          size='icon'
+                          className='h-8 w-8 flex-shrink-0'
+                          onClick={() => handlePlayPause(file.id)}
+                        >
+                          {currentlyPlaying === file.id ? (
+                            <Pause className='h-4 w-4' />
+                          ) : (
+                            <Play className='h-4 w-4' />
+                          )}
+                        </Button>
+
+                        <div className='w-full space-y-1'>
+                          <Slider
+                            value={[audioProgress[file.id] || 0]}
+                            onValueChange={value => handleSeek(file.id, value)}
+                            min={0}
+                            max={100}
+                            step={0.1}
+                            className='w-full'
+                          />
+                          <div className='flex justify-between text-xs text-muted-foreground'>
+                            <span>
+                              {formatTime(
+                                (audioProgress[file.id] / 100) * file.duration
+                              )}
+                            </span>
+                            <span>{formatTime(file.duration)}</span>
+                          </div>
+                        </div>
+
+                        {/* Hidden audio element */}
+                        <audio
+                          ref={el => {
+                            audioRefs.current[file.id] = el
+                          }}
+                          src={file.audioUrl}
+                          onEnded={() => handleAudioEnded(file.id)}
+                          onTimeUpdate={() => handleTimeUpdate(file.id)}
+                          className='hidden'
+                        />
+                      </div>
+
+                      <div className='rounded-md bg-muted/30 p-3 text-sm'>
+                        <p>{file.content}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
-          )}
+          </div>
         </div>
       )}
     </div>

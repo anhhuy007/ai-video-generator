@@ -11,6 +11,9 @@ type GenerationStore = {
 
   mp3_url: string[]
   setMp3Url: (mp3_url: string[]) => void
+
+  video_url: string
+  setVideoUrl: (video_url: string) => void
 }
 
 export const useGenerationStore = create<GenerationStore>(set => ({
@@ -27,5 +30,8 @@ export const useGenerationStore = create<GenerationStore>(set => ({
   setImages: images => set({ images }),
 
   mp3_url: [],
-  setMp3Url: mp3_url => set({ mp3_url })
+  setMp3Url: mp3_url => set({ mp3_url }),
+
+  video_url: '',
+  setVideoUrl: video_url => set({ video_url })
 }))

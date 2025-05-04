@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Check, Facebook, Loader2, Youtube } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
+import { useGenerationStore } from '@/store/useGenerationStore'
 
 const RESOLUTIONS = [
   {
@@ -58,6 +59,7 @@ const PLATFORMS = [
 ]
 
 export default function Publishing({ onComplete }: { onComplete: () => void }) {
+  const [resolution, setResolution] = useState('1080p')
   const [activeTab, setActiveTab] = useState('metadata')
   const [title, setTitle] = useState(
     'AI Generated Video - The Evolution of Artificial Intelligence'
@@ -68,26 +70,11 @@ export default function Publishing({ onComplete }: { onComplete: () => void }) {
   const [tags, setTags] = useState(
     'AI, artificial intelligence, technology, future'
   )
-  const [resolution, setResolution] = useState('1080p')
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([])
   const [isPublishing, setIsPublishing] = useState(false)
   const [isPublished, setIsPublished] = useState(false)
 
-  // Update completion status when publishing is complete
-  useEffect(() => {
-    if (isPublished) {
-      onComplete()
-    }
-  }, [isPublished, onComplete])
-
-  const togglePlatform = (platformId: string) => {
-    if (selectedPlatforms.includes(platformId)) {
-      setSelectedPlatforms(selectedPlatforms.filter(id => id !== platformId))
-    } else {
-      setSelectedPlatforms([...selectedPlatforms, platformId])
-    }
-  }
-
+  const { video_url } = useGenerationStore()
   const handlePublish = () => {
     setIsPublishing(true)
 
@@ -97,6 +84,21 @@ export default function Publishing({ onComplete }: { onComplete: () => void }) {
       setIsPublished(true)
     }, 3000)
   }
+
+  const togglePlatform = (platformId: string) => {
+    if (selectedPlatforms.includes(platformId)) {
+      setSelectedPlatforms(selectedPlatforms.filter(id => id !== platformId))
+    } else {
+      setSelectedPlatforms([...selectedPlatforms, platformId])
+    }
+  }
+
+  // Update completion status when publishing is complete
+  useEffect(() => {
+    if (isPublished) {
+      onComplete()
+    }
+  }, [isPublished, onComplete])
 
   return (
     <div>

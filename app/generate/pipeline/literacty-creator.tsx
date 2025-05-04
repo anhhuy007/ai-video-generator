@@ -36,6 +36,7 @@ const SUGGESTED_TOPICS = [
   'Understanding Quantum Computing',
   'The History of Cinema'
 ]
+const SCENE_COUNT_OPTIONS = [3, 5, 7, 10]
 
 export default function LiteraryCreator({
   onComplete
@@ -53,7 +54,6 @@ export default function LiteraryCreator({
   const [inputMethod, setInputMethod] = useState<'type' | 'upload'>('type')
 
   // File upload states
-  const [sceneCount, setSceneCount] = useState(3)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [isProcessingFile, setIsProcessingFile] = useState(false)
   const [fileProcessed, setFileProcessed] = useState(false)
@@ -69,8 +69,13 @@ export default function LiteraryCreator({
   const [isComplete, setIsComplete] = useState(false)
   const [error, setError] = useState('')
 
-  const { setStory } = useGenerationStore()
+  // Scence count
+  const [sceneCount, setSceneCount] = useState<number>(5)
+  const [customSceneCount, setCustomSceneCount] = useState<string>('5')
+  const [isCustomSceneCount, setIsCustomSceneCount] = useState(false)
+  const [sceneCountSelected, setSceneCountSelected] = useState(true)
 
+  const { setStory } = useGenerationStore()
 
   // Update completion status when script is approved
   useEffect(() => {
@@ -238,6 +243,35 @@ export default function LiteraryCreator({
       console.error('Error processing file:', error)
     } finally {
       setIsProcessingFile(false)
+    }
+  }
+
+  const handleSceneCountSelect = (count: number) => {
+    setSceneCount(count)
+    setCustomSceneCount(count.toString())
+    setIsCustomSceneCount(false)
+    setSceneCountSelected(true)
+  }
+
+  const handleCustomSceneCountChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const value = e.target.value
+    setCustomSceneCount(value)
+
+    const parsedValue = Number.parseInt(value, 10)
+    if (!isNaN(parsedValue) && parsedValue > 0) {
+      setSceneCount(parsedValue)
+      setSceneCountSelected(true)
+    } else {
+      setSceneCountSelected(false)
+    }
+  }
+
+  const handleCustomSceneCountToggle = () => {
+    setIsCustomSceneCount(!isCustomSceneCount)
+    if (!isCustomSceneCount) {
+      setCustomSceneCount(sceneCount.toString())
     }
   }
 
@@ -500,6 +534,68 @@ export default function LiteraryCreator({
                       </Label>
                     </div>
                   </RadioGroup>
+                </div>
+
+                <div className='mt-6'>
+                  <Label className='mb-2 block'>Number of Scenes</Label>
+                  <p className='mb-3 text-sm text-muted-foreground'>
+                    Select how many scenes you want to generate for your video
+                  </p>
+
+                  <div className='mb-3 grid grid-cols-4 gap-2'>
+                    {SCENE_COUNT_OPTIONS.map(count => (
+                      <Card
+                        key={count}
+                        className={`cursor-pointer transition-colors hover:border-primary ${
+                          sceneCount === count && !isCustomSceneCount
+                            ? 'border-primary bg-primary/10'
+                            : ''
+                        }`}
+                        onClick={() => handleSceneCountSelect(count)}
+                      >
+                        <CardContent className='p-3 text-center'>
+                          <div className='flex items-center justify-center'>
+                            <span className='text-lg font-medium'>{count}</span>
+                            {sceneCount === count && !isCustomSceneCount && (
+                              <Check className='ml-2 h-4 w-4 text-primary' />
+                            )}
+                          </div>
+                          <span className='text-xs text-muted-foreground'>
+                            scenes
+                          </span>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+
+                  <div className='mb-2 flex items-center space-x-2'>
+                    <input
+                      type='checkbox'
+                      id='custom-scene-count'
+                      checked={isCustomSceneCount}
+                      onChange={handleCustomSceneCountToggle}
+                      className='rounded border-gray-300'
+                    />
+                    <Label htmlFor='custom-scene-count'>
+                      Custom number of scenes
+                    </Label>
+                  </div>
+
+                  {isCustomSceneCount && (
+                    <div className='flex items-center space-x-2'>
+                      <Input
+                        type='number'
+                        min='1'
+                        max='20'
+                        value={customSceneCount}
+                        onChange={handleCustomSceneCountChange}
+                        className='w-24'
+                      />
+                      <span className='text-sm text-muted-foreground'>
+                        scenes (1-20)
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <Button

@@ -513,20 +513,15 @@ export default function ImageVideoGenerator({
               </div>
             </div>
             <div className='mt-6'>
-              {imagesApproved || isUploading ? (
+              {imagesApproved && !isUploading ? (
                 <div className='rounded-md border border-green-500 bg-green-50 p-4'>
                   <div className='mb-2 flex items-center text-green-700'>
                     <Check className='mr-2 h-5 w-5 animate-pulse' />
-                    <h3 className='font-medium'>
-                      {isUploading
-                        ? 'Images Approved & Uploading...'
-                        : 'Images Approved!'}
-                    </h3>
+                    <h3 className='font-medium'>Images Approved & Uploaded!</h3>
                   </div>
                   <p className='text-sm text-green-600'>
-                    {isUploading
-                      ? 'Images have been approved and are being pushed to Cloudinary...'
-                      : 'All images have been approved and pushed to Cloudinary. Now you can create video creation.'}
+                    All images have been approved and pushed to Cloudinary. Now
+                    you can create the video.
                   </p>
                 </div>
               ) : (
@@ -535,7 +530,14 @@ export default function ImageVideoGenerator({
                   disabled={!allScreensHaveImages() || isUploading}
                   className='w-full'
                 >
-                  Approve All Images
+                  {isUploading ? (
+                    <span className='flex items-center'>
+                      <span className='mr-2 animate-spin'>◯</span>
+                      Uploading...
+                    </span>
+                  ) : (
+                    'Approve and Upload Images'
+                  )}
                 </Button>
               )}
             </div>

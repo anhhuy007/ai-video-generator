@@ -39,7 +39,7 @@ const MUSIC_STYLES = [
 export default function useShotstackRender(
   mediaItems: MediaItem[],
   effect: Effect,
-  options: ShotstackRenderOptions = {}
+  isProduction: Boolean
 ) {
   const [isRendering, setIsRendering] = useState(false)
   const [renderData, setRenderData] = useState<any>(null)
@@ -48,18 +48,19 @@ export default function useShotstackRender(
   const [renderError, setRenderError] = useState<Error | null>(null)
   const [renderId, setRenderId] = useState<string | null>(null)
 
-  const apiKey =
-    options.apiKey || process.env.NEXT_PUBLIC_SHOTSTACK_API_KEY_SANDBOX || ''
-  const apiUrl =
-    options.apiUrl ||
-    process.env.NEXT_PUBLIC_SHOTSTACK_API_URL_SANDBOX ||
-    'https://api.shotstack.io/stage'
-  const pollInterval = options.pollInterval || 5000
+  const apiKey = isProduction
+    ? process.env.NEXT_PUBLIC_SHOTSTACK_API_KEY_PRODUCTION
+    : process.env.NEXT_PUBLIC_SHOTSTACK_API_KEY_SANDBOX
+
+  const apiUrl = isProduction
+    ? process.env.NEXT_PUBLIC_SHOTSTACK_API_URL_PRODUCTION
+    : process.env.NEXT_PUBLIC_SHOTSTACK_API_URL_SANDBOX
+
+  const pollInterval = 5000
 
   const createTimeline = (items: MediaItem[], effect: Effect) => {
     const tracks = [
       {
-        // Track hình ảnh
         clips: items.map((item, index) => {
           const clip = {
             asset: {
@@ -196,7 +197,6 @@ export default function useShotstackRender(
         const status = data.response.status
         setRenderStatus(status)
 
-        // Cập nhật tiến trình dựa trên trạng thái
         switch (status) {
           case 'queued':
             setRenderProgress(10)
@@ -236,12 +236,10 @@ export default function useShotstackRender(
     }
   }
 
-  // Theo dõi và kiểm tra trạng thái render
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null
 
     if (renderId && isRendering) {
-      // Kiểm tra ngay lập tức, sau đó định kỳ
       checkRenderStatus(renderId)
 
       interval = setInterval(() => {

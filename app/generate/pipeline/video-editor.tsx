@@ -40,6 +40,7 @@ import useShotstackRender from '@/hooks/use-shotstack'
 import { string } from 'zod'
 import { MediaItem, Effect } from '@/app/utils/type'
 import { error } from 'console'
+import axios from 'axios'
 
 // Format time in MM:SS format
 const formatTime = (seconds: number) => {
@@ -81,9 +82,12 @@ const SUBTITLE_STYLES = [
 
 // Subtitle positions
 const SUBTITLE_POSITIONS = [
-  { key: 'Top', value: 'top' },
+  { key: 'Bottom Left', value: 'bottomLeft' },
   { key: 'Bottom', value: 'bottom' },
-  { key: 'Floating', value: 'floating' }
+  { key: 'Bottom Right', value: 'bottomRight' },
+  { key: 'Left', value: 'left' },
+  { key: 'Center', value: 'center' },
+  { key: 'Right', value: 'right' }
 ]
 
 const MUSIC_STYLES = [
@@ -121,12 +125,14 @@ export default function VideoEditor({
   const [activeTab, setActiveTab] = useState('timeline')
   const [autoSubtitles, setAutoSubtitles] = useState(true)
   const [backgroundMusic, setBackgroundMusic] = useState(true)
+  // const [isEditorComplete, setIsEditorComplete] = useState(false)
   const [isPreviewReady, setIsPreviewReady] = useState(false)
-  const [isEditorComplete, setIsEditorComplete] = useState(false)
-  const { story, images, mp3_url } = useGenerationStore()
+  const { story, images, mp3_url, setVideoUrl } = useGenerationStore()
   const [media_items, setMediaItems] = useState<MediaItem[]>([])
   const [previewVideoUrl, setPreviewVideoUrl] = useState<string>('')
   const [previewVideoError, setPreviewVideoError] = useState<string>('')
+  const [isConfigurationComplete, setIsConfigurationComplete] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
 
   const [effect, setEffect] = useState<Effect>({
     subtitleStyle: 'future',
@@ -140,6 +146,44 @@ export default function VideoEditor({
   })
 
   const [selectedEffects, setSelectedEffects] = useState<string[]>([])
+  const downloadAndUploadVideo = async () => {
+    try {
+      if (!previewVideoUrl) return
+
+      const videoResponse = await fetch(previewVideoUrl)
+      const videoBlob = await videoResponse.blob()
+
+      const file = new File([videoBlob], 'preview.mp4', { type: 'video/mp4' })
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await axios.post('/api/upload', formData)
+      const uploadedVideoUrl = response.data.url
+
+      if (!uploadedVideoUrl) {
+        throw new Error('Failed to upload video to Cloudinary')
+      }
+
+      setVideoUrl(uploadedVideoUrl)
+
+      console.log('Uploaded video to Cloudinary:', uploadedVideoUrl)
+    } catch (error) {
+      console.error('Failed to download/upload video:', error)
+    }
+  }
+
+  // Update completion status when configuration is complete
+  useEffect(() => {
+    if (isConfigurationComplete) {
+      onComplete()
+    }
+  }, [isConfigurationComplete, onComplete])
+
+  // useEffect(() => {
+  //   if (isConfigurationComplete) {
+  //     downloadAndUploadVideo()
+  //   }
+  // }, [isConfigurationComplete, previewVideoUrl, onComplete])
 
   const updateEffect = (key: keyof Effect, value: string) => {
     setEffect(prev => ({
@@ -186,11 +230,6 @@ export default function VideoEditor({
     }
   }
 
-  useEffect(() => {
-    console.log('Volume', effect.musicStyle.volume)
-  }),
-    [effect.musicStyle.volume]
-
   const handleMusicVolumeChange = (value: number[]) => {
     setEffect(prev => ({
       ...prev,
@@ -209,26 +248,19 @@ export default function VideoEditor({
   const { startRender, isRendering, renderData } = useShotstackRender(
     media_items,
     effect,
-    {
-      apiKey: process.env.NEXT_PUBLIC_SHOTSTACK_API_KEY_SANDBOX,
-      apiUrl: process.env.NEXT_PUBLIC_SHOTSTACK_API_URL_SANDBOX
-    }
+    false
   )
 
   useEffect(() => {
-    if (renderData) {
-      console.log('Video đã render xong:', renderData)
-      if (renderData.error !== '') {
-        setPreviewVideoError(renderData.error)
-        return
-      }
-      setPreviewVideoUrl(renderData.url)
-    }
-  }, [renderData])
+    if (renderData == null) return
+    setIsPreviewReady(true)
 
-  useEffect(() => {
-    console.log('Effect change to: ', effect)
-  }, [effect])
+    if (renderData.error !== '') {
+      setPreviewVideoError(renderData.error)
+      return
+    }
+    setPreviewVideoUrl(renderData.url)
+  }, [renderData])
 
   const toggleEffect = (effect: string) => {
     setSelectedEffects(prev =>
@@ -238,8 +270,6 @@ export default function VideoEditor({
 
   useEffect(() => {
     const loadMediaItems = async () => {
-      console.log('Loading media items...', images)
-      console.log('Loading mp3 url...', mp3_url)
       const audioDurations = await Promise.all(
         mp3_url.map(url => getAudioDuration(url))
       )
@@ -266,17 +296,18 @@ export default function VideoEditor({
   const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
-  const totalDuration = 10
-
   // Update completion status when editor is complete
   useEffect(() => {
-    if (isEditorComplete) {
+    if (isConfigurationComplete) {
       onComplete()
     }
-  }, [isEditorComplete, onComplete])
+  }, [isConfigurationComplete, onComplete])
 
-  const handleComplete = () => {
-    setIsEditorComplete(true)
+  const handleComplete = async () => {
+    setIsUploading(true)
+    await downloadAndUploadVideo()
+    setIsUploading(false)
+    setIsConfigurationComplete(true)
   }
 
   useEffect(() => {
@@ -790,100 +821,25 @@ export default function VideoEditor({
                   <div className='text-center'>
                     <Video className='mx-auto h-12 w-12 text-muted-foreground' />
                     <p className='mt-2 text-muted-foreground'>Video Preview</p>
-                    {!isPreviewReady && (
-                      <Button
-                        variant='outline'
-                        size='sm'
-                        className='mt-4 flex items-center gap-2'
-                        onClick={startRender}
-                        disabled={isRendering}
-                      >
-                        {isRendering ? (
-                          <>
-                            <Loader2 className='h-4 w-4 animate-spin' />
-                            Generating Video...
-                          </>
-                        ) : (
-                          'Generate Video'
-                        )}
-                      </Button>
-                    )}
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      className='mt-4 flex items-center gap-2'
+                      onClick={startRender}
+                      disabled={isRendering}
+                    >
+                      {isRendering ? (
+                        <>
+                          <Loader2 className='h-4 w-4 animate-spin' />
+                          Generating Video...
+                        </>
+                      ) : (
+                        'Generate Video'
+                      )}
+                    </Button>
                   </div>
                 )}
               </div>
-
-              {isPreviewReady && (
-                <div className='flex items-center justify-between bg-muted/30 p-4'>
-                  <div className='flex items-center space-x-4'>
-                    <Button size='sm' variant='outline'>
-                      <svg
-                        xmlns='http://www.w3.org/2000/svg'
-                        width='24'
-                        height='24'
-                        viewBox='0 0 24 24'
-                        fill='none'
-                        stroke='currentColor'
-                        strokeWidth='2'
-                        strokeLinecap='round'
-                        strokeLinejoin='round'
-                        className='h-4 w-4'
-                      >
-                        <polygon points='5 3 19 12 5 21 5 3'></polygon>
-                      </svg>
-                    </Button>
-                    <div className='h-1 w-48 rounded-full bg-muted-foreground/30'>
-                      <div className='h-1 w-1/3 rounded-full bg-primary'></div>
-                    </div>
-                    <span className='text-xs text-muted-foreground'>
-                      00:00 / {Math.floor(totalDuration / 60)}:
-                      {(totalDuration % 60).toString().padStart(2, '0')}
-                    </span>
-                  </div>
-                  <div className='flex items-center space-x-2'>
-                    <Button size='sm' variant='outline'>
-                      <svg
-                        xmlns='http://www.w3.org/2000/svg'
-                        width='24'
-                        height='24'
-                        viewBox='0 0 24 24'
-                        fill='none'
-                        stroke='currentColor'
-                        strokeWidth='2'
-                        strokeLinecap='round'
-                        strokeLinejoin='round'
-                        className='h-4 w-4'
-                      >
-                        <polygon points='11 5 6 9 2 9 2 15 6 15 11 19 11 5'></polygon>
-                        <path d='M15.54 8.46a5 5 0 0 1 0 7.07'></path>
-                        <path d='M19.07 4.93a10 10 0 0 1 0 14.14'></path>
-                      </svg>
-                    </Button>
-                    <Button size='sm' variant='outline'>
-                      <svg
-                        xmlns='http://www.w3.org/2000/svg'
-                        width='24'
-                        height='24'
-                        viewBox='0 0 24 24'
-                        fill='none'
-                        stroke='currentColor'
-                        strokeWidth='2'
-                        strokeLinecap='round'
-                        strokeLinejoin='round'
-                        className='h-4 w-4'
-                      >
-                        <rect
-                          x='2'
-                          y='2'
-                          width='20'
-                          height='20'
-                          rx='5'
-                          ry='5'
-                        ></rect>
-                      </svg>
-                    </Button>
-                  </div>
-                </div>
-              )}
             </div>
 
             <div className='flex justify-between'>
@@ -892,15 +848,22 @@ export default function VideoEditor({
               </Button>
               <Button
                 onClick={handleComplete}
-                disabled={!isPreviewReady || isEditorComplete}
+                disabled={
+                  !isPreviewReady || isUploading || isConfigurationComplete
+                }
               >
-                {isEditorComplete ? (
+                {isUploading ? (
+                  <span className='flex items-center'>
+                    <span className='mr-2 animate-spin'>◯</span>
+                    Uploading...
+                  </span>
+                ) : isConfigurationComplete ? (
                   <>
                     <Check className='mr-2 h-4 w-4' />
-                    Video Editing Complete
+                    Successfully finalize and upload to Cloudinary
                   </>
                 ) : (
-                  'Finalize Video'
+                  'Finalize Video and upload to Cloudinary'
                 )}
               </Button>
             </div>
