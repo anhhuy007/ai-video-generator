@@ -1,9 +1,9 @@
 'use server'
-// app/api/statistics/prompts/route.ts
+// app/api/statistics/usage/route.ts
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
-import { getPromptStatistics } from '@/app/service/statistics.service'
+import { getUserUsageStatistics } from '@/app/service/usage.service'
 
 export async function GET(req: Request) {
   try {
@@ -30,10 +30,10 @@ export async function GET(req: Request) {
       )
     }
 
-    const stats = await getPromptStatistics(userId)
+    const stats = await getUserUsageStatistics(userId)
     return NextResponse.json(stats, { status: 200 })
   } catch (error) {
-    console.error('Error fetching prompt statistics:', error)
+    console.error('Error fetching usage statistics:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

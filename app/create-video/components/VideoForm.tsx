@@ -9,14 +9,45 @@ export default function VideoForm() {
   const [videoUrl, setVideoUrl] = useState<string>('')
   const [prompt, setPrompt] = useState<string>('')
   const [title, setTitle] = useState<string>('')
+  const [category, setCategory] = useState<string>('')
+  const [duration, setDuration] = useState<number>(0)
   const [uploading, setUploading] = useState<boolean>(false)
   const [uploadedUrl, setUploadedUrl] = useState<string>('')
   const [successMessage, setSuccessMessage] = useState<string>('')
   const [error, setError] = useState<string>('')
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0] || null
     setFile(selectedFile)
+
+    if (selectedFile) {
+      try {
+        // Lấy duration của video
+        const videoDuration = await getVideoDuration(selectedFile)
+        setDuration(Math.round(videoDuration))
+      } catch (err) {
+        console.error('Không thể lấy được thời lượng video:', err)
+      }
+    }
+  }
+
+  // Hàm để lấy thời lượng của video
+  const getVideoDuration = (file: File): Promise<number> => {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement('video')
+      video.preload = 'metadata'
+
+      video.onloadedmetadata = () => {
+        window.URL.revokeObjectURL(video.src)
+        resolve(video.duration)
+      }
+
+      video.onerror = () => {
+        reject('Error loading video')
+      }
+
+      video.src = URL.createObjectURL(file)
+    })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -42,6 +73,11 @@ export default function VideoForm() {
 
     if (!file && !videoUrl) {
       setError('Vui lòng chọn file hoặc nhập đường link video')
+      return
+    }
+
+    if (duration <= 0) {
+      setError('Không thể xác định thời lượng video')
       return
     }
 
@@ -82,15 +118,20 @@ export default function VideoForm() {
         },
         body: JSON.stringify({
           videoUrl: uploadData.url,
-          title: title
-          // userId is handled by the server from session
+          title: title,
+          category: category || null,
+          duration: duration
         })
       })
 
       const galleryData = await galleryResponse.json()
 
       if (!galleryResponse.ok) {
-        throw new Error(galleryData.error || 'Lỗi khi tạo gallery entry')
+        console.error('Gallery API error:', galleryData)
+        throw new Error(
+          galleryData.error ||
+            `Lỗi khi tạo gallery entry: ${galleryResponse.status} ${galleryResponse.statusText}`
+        )
       }
 
       // Bước 3: Tạo gen history entry
@@ -119,6 +160,8 @@ export default function VideoForm() {
       setVideoUrl('')
       setPrompt('')
       setTitle('')
+      setCategory('')
+      setDuration(0)
     } catch (error) {
       console.error('Lỗi:', error)
       setError(error instanceof Error ? error.message : 'Đã xảy ra lỗi')
@@ -170,9 +213,26 @@ export default function VideoForm() {
       <div className='mb-4'>
         <label
           className='mb-2 block text-sm font-bold text-gray-700'
+          htmlFor='category'
+        >
+          Danh mục
+        </label>
+        <input
+          id='category'
+          type='text'
+          placeholder='Nhập danh mục cho video (không bắt buộc)'
+          value={category}
+          onChange={e => setCategory(e.target.value)}
+          className='focus:shadow-outline w-full appearance-none rounded border px-3 py-2 leading-tight text-gray-700 shadow focus:outline-none'
+        />
+      </div>
+
+      <div className='mb-4'>
+        <label
+          className='mb-2 block text-sm font-bold text-gray-700'
           htmlFor='file'
         >
-          Tải lên video
+          Tải lên video *
         </label>
         <input
           id='file'
@@ -181,6 +241,11 @@ export default function VideoForm() {
           onChange={handleFileChange}
           className='focus:shadow-outline w-full appearance-none rounded border px-3 py-2 leading-tight text-gray-700 shadow focus:outline-none'
         />
+        {duration > 0 && (
+          <p className='mt-1 text-sm text-gray-600'>
+            Thời lượng: {duration} giây
+          </p>
+        )}
       </div>
 
       <div className='mb-4'>
@@ -198,6 +263,26 @@ export default function VideoForm() {
           onChange={e => setVideoUrl(e.target.value)}
           className='focus:shadow-outline w-full appearance-none rounded border px-3 py-2 leading-tight text-gray-700 shadow focus:outline-none'
         />
+        {videoUrl && (
+          <div className='mt-2'>
+            <label
+              className='mb-2 block text-sm font-bold text-gray-700'
+              htmlFor='manualDuration'
+            >
+              Thời lượng video (giây) *
+            </label>
+            <input
+              id='manualDuration'
+              type='number'
+              min='1'
+              placeholder='Nhập thời lượng video (giây)'
+              value={duration === 0 ? '' : duration}
+              onChange={e => setDuration(parseInt(e.target.value) || 0)}
+              className='focus:shadow-outline w-full appearance-none rounded border px-3 py-2 leading-tight text-gray-700 shadow focus:outline-none'
+              required={!!videoUrl}
+            />
+          </div>
+        )}
       </div>
 
       <div className='mb-6'>
