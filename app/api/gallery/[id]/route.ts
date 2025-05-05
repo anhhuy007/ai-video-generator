@@ -1,9 +1,7 @@
 'use server'
 // app/api/gallery/[id]/route.ts
 import { NextResponse } from 'next/server'
-import {
-  getGalleryEntryById
-} from '@/app/service/galery.service'
+import { getGalleryEntryById } from '@/app/service/gallery.service'
 export async function GET(
   req: Request,
   { params }: { params: { id: string } }

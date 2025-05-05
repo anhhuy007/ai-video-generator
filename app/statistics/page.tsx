@@ -28,6 +28,23 @@ export default function StatisticsPage() {
     )
   }
 
+  if (!session) {
+    return (
+      <div className='flex h-screen items-center justify-center'>
+        <div className='rounded-lg border bg-white p-6 shadow-md'>
+          <h1 className='mb-4 text-2xl font-bold'>Không có quyền truy cập</h1>
+          <p className='mb-4'>Vui lòng đăng nhập để xem thống kê của bạn.</p>
+          <button
+            onClick={() => (window.location.href = '/api/auth/signin')}
+            className='rounded bg-primary px-4 py-2 text-white hover:bg-primary/90'
+          >
+            Đăng nhập
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <SidebarProvider defaultOpen={true}>
       <div className='flex h-screen w-full overflow-hidden bg-background'>
@@ -55,7 +72,7 @@ export default function StatisticsPage() {
                   <UsageMetrics />
                 </TabsContent>
                 <TabsContent value='prompts' className='space-y-6'>
-                  <PopularPrompts />
+                  <PopularPrompts userId={session?.user?.id} />
                 </TabsContent>
               </Tabs>
             </div>

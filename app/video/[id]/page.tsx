@@ -1,5 +1,5 @@
 // app/video/[id]/page.tsx
-import { getGalleryEntryById } from '@/app/service/galery.service'
+import { getGalleryEntryById } from '@/app/service/gallery.service'
 import { getGenHistoryForGallery } from '@/app/service/genHistory.service'
 import { getUserById } from '@/app/service/user.service'
 import VideoDetailView from './components/VideoDetailView'

@@ -38,7 +38,6 @@ interface Prompt {
   id: string
   text: string
   count: number
-  quality: number
   tags: string[]
 }
 
@@ -173,20 +172,6 @@ export function PopularPrompts({ userId }: PopularPromptsProps) {
                         ))}
                     </div>
                   </TableHead>
-                  <TableHead
-                    className='w-[100px] cursor-pointer'
-                    onClick={() => handleSort('quality')}
-                  >
-                    <div className='flex items-center'>
-                      Chất lượng
-                      {sortField === 'quality' &&
-                        (sortDirection === 'asc' ? (
-                          <ChevronUp className='ml-1 h-4 w-4' />
-                        ) : (
-                          <ChevronDown className='ml-1 h-4 w-4' />
-                        ))}
-                    </div>
-                  </TableHead>
                   <TableHead className='w-[150px]'>Thẻ</TableHead>
                   <TableHead className='w-[100px]'>Hành động</TableHead>
                 </TableRow>
@@ -194,7 +179,7 @@ export function PopularPrompts({ userId }: PopularPromptsProps) {
               <TableBody>
                 {filteredPrompts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className='text-center'>
+                    <TableCell colSpan={4} className='text-center'>
                       Không tìm thấy từ khóa nào
                     </TableCell>
                   </TableRow>
@@ -205,7 +190,6 @@ export function PopularPrompts({ userId }: PopularPromptsProps) {
                         {prompt.text}
                       </TableCell>
                       <TableCell>{prompt.count}</TableCell>
-                      <TableCell>{prompt.quality.toFixed(1)}</TableCell>
                       <TableCell>
                         <div className='flex flex-wrap gap-1'>
                           {prompt.tags.map(tag => (

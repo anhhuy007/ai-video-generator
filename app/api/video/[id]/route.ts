@@ -1,7 +1,7 @@
 'use server'
 // app/api/video/[id]/route.ts
 import { NextResponse } from 'next/server'
-import { getGalleryEntryById } from '@/app/service/galery.service'
+import { getGalleryEntryById } from '@/app/service/gallery.service'
 import { getGenHistoryForGallery } from '@/app/service/genHistory.service'
 import { getUserById } from '@/app/service/user.service'
 

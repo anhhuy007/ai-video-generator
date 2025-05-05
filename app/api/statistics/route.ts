@@ -22,6 +22,14 @@ export async function GET(req: Request) {
       )
     }
 
+    // Check if the requesting user is accessing their own data
+    if (userId !== session.user.id) {
+      return NextResponse.json(
+        { error: 'You can only access your own statistics' },
+        { status: 403 }
+      )
+    }
+
     const stats = await getStatistics(userId)
     return NextResponse.json(stats, { status: 200 })
   } catch (error) {

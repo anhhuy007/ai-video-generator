@@ -17,11 +17,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  Legend
+  Bar
 } from 'recharts'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
@@ -33,25 +29,15 @@ interface StatsData {
   duration: number
 }
 
-interface QualityData {
-  name: string
-  value: number
-}
-
 interface GenerationStatsProps {
   userId?: string
 }
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042']
 
 export function GenerationStats({ userId }: GenerationStatsProps) {
   const [timeRange, setTimeRange] = useState('daily')
   const [dailyData, setDailyData] = useState<StatsData[]>([])
   const [weeklyData, setWeeklyData] = useState<StatsData[]>([])
   const [monthlyData, setMonthlyData] = useState<StatsData[]>([])
-  const [qualityDistribution, setQualityDistribution] = useState<QualityData[]>(
-    []
-  )
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -68,10 +54,33 @@ export function GenerationStats({ userId }: GenerationStatsProps) {
         }
         const data = await response.json()
 
-        setDailyData(data.daily || [])
+        // Ensure we have data for all days even if no videos were created
+        const today = new Date()
+        const dailyDataMap = new Map()
+
+        // Create entries for the past 14 days (increased from 7 to match the backend)
+        for (let i = 13; i >= 0; i--) {
+          const date = new Date(today)
+          date.setDate(date.getDate() - i)
+          const dateStr = date.toISOString().split('T')[0]
+          dailyDataMap.set(dateStr, { date: dateStr, count: 0, duration: 0 })
+        }
+
+        // Update with actual data
+        ;(data.daily || []).forEach((entry: StatsData) => {
+          if (dailyDataMap.has(entry.date)) {
+            dailyDataMap.set(entry.date, entry)
+          }
+        })
+
+        // Sort daily data by date
+        const sortedDailyData = Array.from(dailyDataMap.values()).sort(
+          (a, b) => new Date(a.date!).getTime() - new Date(b.date!).getTime()
+        )
+
+        setDailyData(sortedDailyData)
         setWeeklyData(data.weekly || [])
         setMonthlyData(data.monthly || [])
-        setQualityDistribution(data.qualityDistribution || [])
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Error fetching data')
       } finally {
@@ -106,6 +115,25 @@ export function GenerationStats({ userId }: GenerationStatsProps) {
       default:
         return 'date'
     }
+  }
+
+  const formatXAxis = (value: string) => {
+    if (timeRange === 'daily') {
+      try {
+        const date = new Date(value)
+        return `${date.getDate()}/${date.getMonth() + 1}`
+      } catch {
+        return value
+      }
+    }
+    return value
+  }
+
+  // Helper function to format duration from seconds to minutes:seconds
+  const formatDuration = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60)
+    const remainingSeconds = Math.floor(seconds % 60)
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
   }
 
   if (isLoading) {
@@ -148,19 +176,44 @@ export function GenerationStats({ userId }: GenerationStatsProps) {
               margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
             >
               <CartesianGrid strokeDasharray='3 3' />
-              <XAxis dataKey={getDataKey()} />
-              <YAxis />
-              <Tooltip />
+              <XAxis dataKey={getDataKey()} tickFormatter={formatXAxis} />
+              <YAxis allowDecimals={false} domain={[0, 'auto']} />
+              <Tooltip
+                formatter={(value: number) => [value, 'Số video']}
+                labelFormatter={value => {
+                  if (timeRange === 'daily') {
+                    try {
+                      const date = new Date(value)
+                      return `Ngày ${date.getDate()}/${date.getMonth() + 1}`
+                    } catch {
+                      return value
+                    }
+                  }
+                  return value
+                }}
+              />
               <Bar dataKey='count' fill='#8884d8' name='Số video' />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className='col-span-2'>
         <CardHeader>
           <CardTitle>Thời Lượng Video</CardTitle>
-          <CardDescription>Tổng thời lượng video đã tạo (phút)</CardDescription>
+          <CardDescription>Tổng thời lượng video đã tạo (giây)</CardDescription>
+          <Tabs
+            defaultValue='daily'
+            value={timeRange}
+            onValueChange={setTimeRange}
+            className='w-full'
+          >
+            <TabsList className='grid w-full max-w-[300px] grid-cols-3'>
+              <TabsTrigger value='daily'>Hàng ngày</TabsTrigger>
+              <TabsTrigger value='weekly'>Hàng tuần</TabsTrigger>
+              <TabsTrigger value='monthly'>Hàng tháng</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </CardHeader>
         <CardContent className='h-[300px]'>
           <ResponsiveContainer width='100%' height='100%'>
@@ -169,53 +222,33 @@ export function GenerationStats({ userId }: GenerationStatsProps) {
               margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
             >
               <CartesianGrid strokeDasharray='3 3' />
-              <XAxis dataKey={getDataKey()} />
+              <XAxis dataKey={getDataKey()} tickFormatter={formatXAxis} />
               <YAxis />
-              <Tooltip />
+              <Tooltip
+                formatter={(value: number) => [
+                  formatDuration(value),
+                  'Thời lượng'
+                ]}
+                labelFormatter={value => {
+                  if (timeRange === 'daily') {
+                    try {
+                      const date = new Date(value)
+                      return `Ngày ${date.getDate()}/${date.getMonth() + 1}`
+                    } catch {
+                      return value
+                    }
+                  }
+                  return value
+                }}
+              />
               <Line
                 type='monotone'
                 dataKey='duration'
                 stroke='#82ca9d'
-                name='Thời lượng (phút)'
+                name='Thời lượng (giây)'
                 strokeWidth={2}
               />
             </LineChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Phân Phối Chất Lượng</CardTitle>
-          <CardDescription>
-            Phân bố video theo mức chất lượng đã chọn
-          </CardDescription>
-        </CardHeader>
-        <CardContent className='h-[300px]'>
-          <ResponsiveContainer width='100%' height='100%'>
-            <PieChart>
-              <Pie
-                data={qualityDistribution}
-                cx='50%'
-                cy='50%'
-                labelLine={false}
-                outerRadius={80}
-                fill='#8884d8'
-                dataKey='value'
-                label={({ name, percent }) =>
-                  `${name}: ${(percent * 100).toFixed(0)}%`
-                }
-              >
-                {qualityDistribution.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={COLORS[index % COLORS.length]}
-                  />
-                ))}
-              </Pie>
-              <Tooltip />
-              <Legend />
-            </PieChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>
