@@ -41,6 +41,7 @@ import { string } from 'zod'
 import { MediaItem, Effect } from '@/app/utils/type'
 import { error } from 'console'
 import axios from 'axios'
+import { Caption } from '@/app/utils/type'
 
 // Format time in MM:SS format
 const formatTime = (seconds: number) => {
@@ -74,20 +75,79 @@ const TRANSITION_EFFECTS = [
 ]
 
 // Subtitle styles
-const SUBTITLE_STYLES = [
-  { key: 'Future', value: 'future' },
-  { key: 'Minimal', value: 'minimal' },
-  { key: 'Skinny', value: 'skinny' }
+export const SUBTITLE_STYLES = [
+  {
+    key: 'Future',
+    value: 'future',
+    font: {
+      family: 'Orbitron Bold',
+      size: '48',
+      lineHeight: 1.2
+    }
+  },
+  {
+    key: 'Minimal',
+    value: 'minimal',
+    font: {
+      family: 'Open Sans Regular',
+      size: '42',
+      lineHeight: 1.4
+    }
+  },
+  {
+    key: 'Skinny',
+    value: 'skinny',
+    font: {
+      family: 'Roboto Thin',
+      size: '40',
+      lineHeight: 1.5
+    }
+  }
 ]
 
-// Subtitle positions
-const SUBTITLE_POSITIONS = [
-  { key: 'Bottom Left', value: 'bottomLeft' },
-  { key: 'Bottom', value: 'bottom' },
-  { key: 'Bottom Right', value: 'bottomRight' },
-  { key: 'Left', value: 'left' },
-  { key: 'Center', value: 'center' },
-  { key: 'Right', value: 'right' }
+export const SUBTITLE_POSITIONS = [
+  {
+    key: 'Bottom Left',
+    value: 'bottomLeft',
+    position: 'bottom',
+    alignment: { horizontal: 'left' },
+    offset: { x: 0.1, y: 0 }
+  },
+  {
+    key: 'Bottom Center',
+    value: 'bottom',
+    position: 'bottom',
+    alignment: { horizontal: 'center' },
+    offset: { x: 0, y: 0 }
+  },
+  {
+    key: 'Bottom Right',
+    value: 'bottomRight',
+    position: 'bottom',
+    alignment: { horizontal: 'right' },
+    offset: { x: -0.1, y: 0 }
+  },
+  {
+    key: 'Center',
+    value: 'center',
+    position: 'center',
+    alignment: { horizontal: 'center' },
+    offset: { x: 0, y: 0 }
+  },
+  {
+    key: 'Left',
+    value: 'left',
+    position: 'left',
+    alignment: { horizontal: 'left' },
+    offset: { x: 0.1, y: 0 }
+  },
+  {
+    key: 'Right',
+    value: 'right',
+    position: 'right',
+    alignment: { horizontal: 'right' },
+    offset: { x: -0.1, y: 0 }
+  }
 ]
 
 const MUSIC_STYLES = [
@@ -141,7 +201,7 @@ export default function VideoEditor({
       musicStyle: 'upbeat',
       mp3Url:
         'https://res.cloudinary.com/dprxfw51q/video/upload/v1744903851/video_gen_ai/v1y5pg3wdjstf5vhgw7x.mp4',
-      volume: 0
+      volume: 20
     }
   })
 
@@ -268,6 +328,29 @@ export default function VideoEditor({
     )
   }
 
+  function splitCaption(
+    text: string,
+    sceneDuration: number,
+    maxWordsPerLine: number = 9
+  ): Caption[] {
+    const words = text.split(' ')
+    const chunks: string[] = []
+
+    for (let i = 0; i < words.length; i += maxWordsPerLine) {
+      const chunk = words.slice(i, i + maxWordsPerLine).join(' ')
+      chunks.push(chunk)
+    }
+
+    const chunkDuration = sceneDuration / chunks.length
+    const captions: Caption[] = chunks.map((chunk, i) => ({
+      text: chunk,
+      start: i * chunkDuration,
+      length: chunkDuration
+    }))
+
+    return captions
+  }
+
   useEffect(() => {
     const loadMediaItems = async () => {
       const audioDurations = await Promise.all(
@@ -276,6 +359,9 @@ export default function VideoEditor({
       try {
         const items: MediaItem[] = images.map((image, index) => {
           const scene = story.scenes[index]
+          const narration = scene.narration
+          const duration = audioDurations[index] || 2
+          const captions = splitCaption(narration, duration)
           return {
             id: `item-${index + 1}`,
             title: scene ? scene.title : `Untitled Scene ${index + 1}`,
@@ -283,7 +369,8 @@ export default function VideoEditor({
             audio: mp3_url[index],
             duration: audioDurations[index] || 2,
             transitionIn: 'none',
-            transitionOut: 'none'
+            transitionOut: 'none',
+            captions: captions
           }
         })
         setMediaItems(items)
@@ -612,6 +699,7 @@ export default function VideoEditor({
                             {SUBTITLE_STYLES.map(style => (
                               <div
                                 key={style.value}
+                                style={{ fontFamily: style.font.family }}
                                 className={`cursor-pointer rounded-md border p-2 text-center text-xs ${
                                   effect.subtitleStyle === style.value
                                     ? 'border-primary bg-primary/10'

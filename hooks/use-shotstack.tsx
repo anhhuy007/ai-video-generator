@@ -1,40 +1,12 @@
 // hooks/useShotstackRender.ts
 import { useState, useEffect } from 'react'
 import axios from 'axios'
-import { Effect, MediaItem } from '@/app/utils/type'
-
-interface ShotstackRenderOptions {
-  apiKey?: string
-  apiUrl?: string
-  pollInterval?: number // milliseconds
-}
-
-const MUSIC_STYLES = [
-  {
-    key: 'Upbeat',
-    value: 'upbeat',
-    mp3_url:
-      'https://res.cloudinary.com/dprxfw51q/video/upload/v1744903851/video_gen_ai/v1y5pg3wdjstf5vhgw7x.mp4'
-  },
-  {
-    key: 'Relaxing',
-    value: 'relaxing',
-    mp3_url:
-      'https://res.cloudinary.com/dprxfw51q/video/upload/v1744904125/video_gen_ai/kxcrij8plog8sypg2scu.mp4'
-  },
-  {
-    key: 'Dramatic',
-    value: 'dramatic',
-    mp3_url:
-      'https://res.cloudinary.com/dprxfw51q/video/upload/v1744904130/video_gen_ai/yup62s3kjrvn8c5umnoi.mp4'
-  },
-  {
-    key: 'Corporate',
-    value: 'corporate',
-    mp3_url:
-      'https://res.cloudinary.com/dprxfw51q/video/upload/v1744904312/video_gen_ai/zjgb91wkqeqnqtpcyuqq.mp4'
-  }
-]
+import { Caption, Effect, MediaItem } from '@/app/utils/type'
+import { start } from 'repl'
+import {
+  SUBTITLE_POSITIONS,
+  SUBTITLE_STYLES
+} from '@/app/generate/pipeline/video-editor'
 
 export default function useShotstackRender(
   mediaItems: MediaItem[],
@@ -58,59 +30,127 @@ export default function useShotstackRender(
 
   const pollInterval = 5000
 
-  const createTimeline = (items: MediaItem[], effect: Effect) => {
-    const tracks = [
-      {
-        clips: items.map((item, index) => {
-          const clip = {
-            asset: {
-              type: 'image',
-              src: item.image
-            },
-            start: 0,
-            length: item.duration
-          }
+  function normalizeAllCaptions(items: MediaItem[]): Caption[] {
+    const allCaptions: Caption[] = []
+    let globalStartTime = 0
+    const offsetPerScene = 0.7
 
-          if (item.transitionIn !== 'none' || item.transitionOut !== 'none') {
-            const transition: any = {}
-            if (item.transitionIn !== 'none') transition.in = item.transitionIn
-            if (item.transitionOut !== 'none')
-              transition.out = item.transitionOut
+    items.forEach((item, sceneIndex) => {
+      const sceneOffset = offsetPerScene * (sceneIndex + 1)
+      let currentTime = globalStartTime
 
-            Object.assign(clip, { transition })
-          }
+      item.captions.forEach(caption => {
+        const startTime = currentTime + sceneOffset
 
-          return clip
+        allCaptions.push({
+          text: caption.text,
+          start: Math.max(0, startTime),
+          length: caption.length
         })
-      },
-      {
-        clips: items.map(item => ({
+
+        currentTime += caption.length
+      })
+
+      globalStartTime += item.duration
+    })
+
+    return allCaptions
+  }
+
+  function createSRTContent(captions: Caption[]): string {
+    let srtContent = ''
+
+    captions.forEach((caption, index) => {
+      const startTime = formatSRTTime(caption.start)
+      const endTime = formatSRTTime(caption.start + caption.length)
+
+      srtContent += `${index + 1}\n`
+      srtContent += `${startTime} --> ${endTime}\n`
+      srtContent += `${caption.text}\n\n`
+    })
+
+    return srtContent
+  }
+
+  function formatSRTTime(seconds: number): string {
+    const hours = Math.floor(seconds / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+    const secs = Math.floor(seconds % 60)
+    const milliseconds = Math.floor((seconds % 1) * 1000)
+
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')},${milliseconds.toString().padStart(3, '0')}`
+  }
+
+  async function uploadSRTFileWithAxios(items: MediaItem[]): Promise<string> {
+    const normalizedCaptions = normalizeAllCaptions(items)
+    const srtContent = createSRTContent(normalizedCaptions)
+
+    const blob = new Blob([srtContent], { type: 'text/plain' })
+    const file = new File([blob], 'captions.srt', { type: 'text/plain' })
+
+    const formData = new FormData()
+    formData.append('file', file)
+
+    console.log('Uploading SRT file:', formData)
+    for (let [key, value] of formData.entries()) {
+      console.log(key, value)
+    }
+
+    console.log('SRT content:', srtContent)
+
+    const response = await axios.post('/api/upload/srt', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+
+    return response.data.url
+  }
+
+  const createTimeline = async (items: MediaItem[], effect: Effect) => {
+    if (!items || items.length === 0) {
+      throw new Error('No media items provided.')
+    }
+
+    const totalDuration = items.reduce(
+      (total, item) => total + item.duration,
+      0
+    )
+
+    const imageTrack = {
+      clips: items.map((item, index) => {
+        const clip: any = {
           asset: {
-            type: 'audio',
-            src: item.audio
+            type: 'image',
+            src: item.image
           },
           start: 0,
           length: item.duration
-        }))
-      },
-      {
-        // Track caption
-        clips: items.map(item => ({
-          asset: {
-            type: 'title',
-            text: item.title,
-            style: effect.subtitleStyle
-          },
-          start: 0,
-          length: item.duration,
-          position: effect.subtitlePosition
-        }))
-      }
-    ]
+        }
 
-    // Thêm track nhạc nền từ effect.musicStyle
+        if (item.transitionIn !== 'none' || item.transitionOut !== 'none') {
+          const transition: any = {}
+          if (item.transitionIn !== 'none') transition.in = item.transitionIn
+          if (item.transitionOut !== 'none') transition.out = item.transitionOut
+          clip.transition = transition
+        }
 
-    tracks.push({
+        return clip
+      })
+    }
+
+    const audioTrack = {
+      clips: items.map(item => ({
+        asset: {
+          type: 'audio',
+          src: item.audio
+        },
+        start: 0,
+        length: item.duration
+      }))
+    }
+
+    const musicTrack = {
       clips: [
         {
           asset: {
@@ -119,16 +159,89 @@ export default function useShotstackRender(
             volume: 0.3 * (effect.musicStyle.volume / 100)
           } as any,
           start: 0,
-          length: items.reduce((total, item) => total + item.duration, 0)
+          length: totalDuration
         }
       ]
-    })
+    }
+    let captionTrack = null
+
+    const selectedSubtitlePosition = effect.subtitlePosition || 'bottomLeft'
+    const selectedStyle = effect.subtitleStyle || 'future'
+
+    // Tìm config tương ứng từ danh sách
+    const selectedPosition =
+      SUBTITLE_POSITIONS.find(pos => pos.value === selectedSubtitlePosition) ||
+      SUBTITLE_POSITIONS[0]
+
+    const subtitleStyle =
+      SUBTITLE_STYLES.find(style => style.value === selectedStyle) ||
+      SUBTITLE_STYLES[0]
+
+    const isBottom = selectedPosition.position === 'bottom'
+
+    try {
+      const captionSrc = await uploadSRTFileWithAxios(items)
+      console.log('Caption SRT URL:', captionSrc)
+
+      // Cấu hình caption track
+      captionTrack = {
+        clips: [
+          {
+            asset: {
+              type: 'caption',
+              src: captionSrc,
+              width: isBottom ? 1000 : 500,
+              font: {
+                ...subtitleStyle.font,
+                size: isBottom ? '40' : subtitleStyle.font.size,
+                lineHeight: isBottom ? 1 : subtitleStyle.font.lineHeight
+              },
+              alignment: selectedPosition.alignment
+            },
+            position: selectedPosition.position,
+            offset: selectedPosition.offset,
+            start: 0,
+            length: totalDuration
+          }
+        ]
+      }
+
+      // captionTrack = {
+      //   clips: [
+      //     {
+      //       asset: {
+      //         type: 'caption',
+      //         src: captionSrc,
+      //         width: 500,
+      //         font: subtitleStyle?.font || {
+      //           family: 'Open Sans Regular',
+      //           size: '42',
+      //           lineHeight: 1.4
+      //         },
+      //         alignment: subtitleConfig?.alignment || { horizontal: 'left' }
+      //       },
+      //       position: subtitleConfig?.position || 'bottom',
+      //       offset: subtitleConfig?.offset || { x: 0, y: 0 },
+      //       start: 0,
+      //       length: totalDuration
+      //     }
+      //   ]
+      // }
+    } catch (err) {
+      console.warn('Failed to upload subtitle:', err)
+    }
+
+    let tracks = []
+    if (captionTrack) {
+      tracks = [captionTrack, imageTrack, audioTrack, musicTrack]
+    } else {
+      tracks = [imageTrack, audioTrack, musicTrack]
+    }
 
     let currentTime = 0
     for (let i = 0; i < items.length; i++) {
-      for (let t = 0; t < Math.min(tracks.length, 3); t++) {
-        tracks[t].clips[i].start = currentTime
-      }
+      imageTrack.clips[i].start = currentTime
+      audioTrack.clips[i].start = currentTime
       currentTime += items[i].duration
     }
 
@@ -145,10 +258,6 @@ export default function useShotstackRender(
 
   const startRender = async () => {
     if (!mediaItems.length || isRendering) return
-    console.log('Render media items: ', mediaItems)
-    console.log('Render effect', effect)
-    const requestBody = createTimeline(mediaItems, effect)
-    console.log('Body', requestBody)
 
     try {
       setIsRendering(true)
@@ -156,9 +265,8 @@ export default function useShotstackRender(
       setRenderData(null)
       setRenderStatus('submitting')
       setRenderProgress(0)
-
-      const requestBody = createTimeline(mediaItems, effect)
-      console.log('Body', requestBody)
+      const requestBody = await createTimeline(mediaItems, effect)
+      console.log('Request body:', requestBody)
       const response = await axios.post(`${apiUrl}/render`, requestBody, {
         headers: {
           'Content-Type': 'application/json',

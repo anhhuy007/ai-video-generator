@@ -65,6 +65,13 @@ type MediaItem = {
   duration: number
   transitionIn: string
   transitionOut: string
+  captions: Caption[]
+}
+
+type Caption = {
+  text: string
+  start: number
+  length: number
 }
 
 type Effect = {
@@ -124,5 +131,6 @@ export type {
   AIModel,
   LLMResponse,
   MediaItem,
-  Effect
+  Effect,
+  Caption
 }

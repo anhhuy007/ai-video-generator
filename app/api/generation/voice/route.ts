@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server'
 import { elevenlabs } from '@/lib/elevenlabs'
 import { streamToBuffer } from '@/lib/utils'
-// app/api/generation/voice/route.ts
 export async function POST(req: Request) {
   const { text, voice, speed, stability, style } = await req.json()
+
+  if (!text || !voice) {
+    return NextResponse.json(
+      { error: 'Text and voice are required' },
+      { status: 400 }
+    )
+  }
 
   const audio = await elevenlabs.generate({
     voice,
@@ -17,6 +23,12 @@ export async function POST(req: Request) {
   })
 
   const audioBuffer = await streamToBuffer(audio)
+  if (!audioBuffer) {
+    return NextResponse.json(
+      { error: 'Failed to generate audio' },
+      { status: 500 }
+    )
+  }
 
   return new NextResponse(audioBuffer, {
     headers: {

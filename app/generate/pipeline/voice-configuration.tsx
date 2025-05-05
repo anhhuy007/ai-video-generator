@@ -73,7 +73,6 @@ export default function VoiceConfiguration({
   const [speed, setSpeed] = useState('1.0')
   const [stability, setStability] = useState('0.5')
   const [style, setStyle] = useState('0')
-  const [isPlaying, setIsPlaying] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isConfigurationComplete, setIsConfigurationComplete] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
@@ -139,7 +138,6 @@ export default function VoiceConfiguration({
       throw error
     }
   }
-
   const handleComplete = async () => {
     if (!selectedVoiceId || !story) {
       console.error('No story or voice selected.')
@@ -178,6 +176,7 @@ export default function VoiceConfiguration({
       if (setMp3Url) {
         setMp3Url(uploadedUrls)
       }
+
       const newGeneratedFiles: Mp3Url[] = []
 
       for (let i = 0; i < uploadedUrls.length; i++) {
@@ -189,7 +188,7 @@ export default function VoiceConfiguration({
         const mp3File: Mp3Url = {
           id: scene.id,
           title: scene.title,
-          content: scene.description,
+          content: scene.narration,
           audioUrl: url,
           duration: duration
         }
@@ -198,10 +197,11 @@ export default function VoiceConfiguration({
       }
 
       setGeneratedAudioFiles(newGeneratedFiles)
-      setIsUploading(false)
       setIsConfigurationComplete(true)
     } catch (error) {
       console.error('Error generating scene audios:', error)
+    } finally {
+      setIsUploading(false)
     }
   }
 
@@ -272,6 +272,7 @@ export default function VoiceConfiguration({
   }
 
   const formatTime = (seconds: number) => {
+    if (isNaN(seconds)) return '0:00'
     const minutes = Math.floor(seconds / 60)
     const remainingSeconds = Math.floor(seconds % 60)
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`

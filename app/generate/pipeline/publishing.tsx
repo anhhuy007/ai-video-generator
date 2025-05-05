@@ -11,6 +11,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Check, Facebook, Loader2, Youtube } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { useGenerationStore } from '@/store/useGenerationStore'
+import axios from 'axios'
 
 const RESOLUTIONS = [
   {
@@ -73,16 +74,83 @@ export default function Publishing({ onComplete }: { onComplete: () => void }) {
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([])
   const [isPublishing, setIsPublishing] = useState(false)
   const [isPublished, setIsPublished] = useState(false)
+  const [publishedUrl, setPublishedUrl] = useState<string>('')
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
 
   const { video_url } = useGenerationStore()
-  const handlePublish = () => {
+
+  useEffect(() => {
+    // Check YouTube authentication status
+    const checkAuthStatus = () => {
+      const hasToken = document.cookie.includes('youtube_access_token=')
+      setIsAuthenticated(hasToken)
+    }
+
+    checkAuthStatus()
+  }, [])
+
+  const handleAuthenticate = () => {
+    // Redirect the user to the authentication API
+    window.location.href = '/api/auth/youtube'
+  }
+
+  const handlePublish = async () => {
+    if (!isAuthenticated) {
+      handleAuthenticate()
+      return
+    }
+
+    if (!video_url) {
+      alert('No video to publish')
+      return
+    }
+
     setIsPublishing(true)
 
-    // Simulate publishing process
-    setTimeout(() => {
+    try {
+      // Download video from URL
+      const videoResponse = await axios.get(video_url, { responseType: 'blob' })
+      const videoBlob = videoResponse.data
+      const videoFile = new File([videoBlob], 'video.mp4', {
+        type: 'video/mp4'
+      })
+
+      // Create FormData
+      const formData = new FormData()
+      formData.append('video', videoFile)
+      formData.append('title', title)
+      formData.append('description', description)
+      formData.append('tags', tags)
+      formData.append('privacyStatus', 'unlisted') // or 'public', 'private'
+
+      // Send upload request
+      const response = await axios.post('/api/youtube/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        },
+        onUploadProgress: progressEvent => {
+          const percentCompleted = Math.round(
+            (progressEvent.loaded * 100) / (progressEvent.total || 1)
+          )
+          console.log(`Upload progress: ${percentCompleted}%`)
+        }
+      })
+
+      // Handle result
+      if (response.data.success) {
+        setIsPublished(true)
+        setPublishedUrl(response.data.youtubeUrl)
+      } else {
+        throw new Error('An error occurred while uploading the video')
+      }
+    } catch (error) {
+      console.error('Error publishing video:', error)
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
+      alert(`Upload failed: ${errorMessage}`)
+    } finally {
       setIsPublishing(false)
-      setIsPublished(true)
-    }, 3000)
+    }
   }
 
   const togglePlatform = (platformId: string) => {
