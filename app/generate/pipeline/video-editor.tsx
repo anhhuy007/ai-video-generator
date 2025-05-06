@@ -217,18 +217,81 @@ export default function VideoEditor({
       const formData = new FormData()
       formData.append('file', file)
 
-      const response = await axios.post('/api/upload', formData)
-      const uploadedVideoUrl = response.data.url
+      // Step 1: Upload video to Cloudinary
+      const uploadResponse = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      })
+
+      const uploadData = await uploadResponse.json()
+
+      if (!uploadResponse.ok) {
+        throw new Error(
+          uploadData.error || 'Failed to upload video to Cloudinary'
+        )
+      }
+
+      const uploadedVideoUrl = uploadData.url
+      setVideoUrl(uploadedVideoUrl)
 
       if (!uploadedVideoUrl) {
         throw new Error('Failed to upload video to Cloudinary')
       }
 
-      setVideoUrl(uploadedVideoUrl)
+      // Step 2: Create a gallery entry
+      const videoDuration = await getAudioDuration(uploadedVideoUrl)
+      const durationInt = Math.round(videoDuration)
 
-      console.log('Uploaded video to Cloudinary:', uploadedVideoUrl)
-    } catch (error) {
-      console.error('Failed to download/upload video:', error)
+      const galleryResponse = await fetch('/api/gallery', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          videoUrl: uploadedVideoUrl,
+          title: story.prompt,
+          category: null,
+          duration: durationInt
+        })
+      })
+
+      const galleryData = await galleryResponse.json()
+
+      if (!galleryResponse.ok || !galleryData.galleryEntry) {
+        throw new Error(
+          galleryData.error ||
+            `Failed to create gallery entry: ${galleryResponse.status} ${galleryResponse.statusText}`
+        )
+      }
+
+      console.log('Gallery entry created:', galleryData)
+      const galleryEntry = galleryData.galleryEntry
+
+      // Step 3: Create a gen history entry
+      const genHistoryResponse = await fetch('/api/gen_history', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          prompt: story.prompt,
+          galleryId: galleryData.galleryEntry.id
+        })
+      })
+
+      const genHistoryData = await genHistoryResponse.json()
+
+      if (!genHistoryResponse.ok || !genHistoryData) {
+        throw new Error(
+          genHistoryData.error ||
+            `Failed to create gen history entry: ${genHistoryResponse.status} ${genHistoryResponse.statusText}`
+        )
+      }
+
+      console.log('Gen history entry created:', genHistoryData)
+    } catch (error: any) {
+      console.error('Upload or API error:', error.message)
+      throw new Error(error.message || 'An unexpected error occurred')
     }
   }
 
@@ -238,12 +301,6 @@ export default function VideoEditor({
       onComplete()
     }
   }, [isConfigurationComplete, onComplete])
-
-  // useEffect(() => {
-  //   if (isConfigurationComplete) {
-  //     downloadAndUploadVideo()
-  //   }
-  // }, [isConfigurationComplete, previewVideoUrl, onComplete])
 
   const updateEffect = (key: keyof Effect, value: string) => {
     setEffect(prev => ({
@@ -392,9 +449,15 @@ export default function VideoEditor({
 
   const handleComplete = async () => {
     setIsUploading(true)
-    await downloadAndUploadVideo()
-    setIsUploading(false)
-    setIsConfigurationComplete(true)
+
+    try {
+      await downloadAndUploadVideo()
+      setIsConfigurationComplete(true)
+    } catch (error) {
+      console.error('Error during video processing:', error)
+    } finally {
+      setIsUploading(false)
+    }
   }
 
   useEffect(() => {

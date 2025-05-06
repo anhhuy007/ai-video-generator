@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Loader2, FileText, Type, Check, Upload } from 'lucide-react'
+import { Loader2, FileText, Type, Check, Upload, Users } from 'lucide-react'
 import type { Scene, Story } from '@/app/utils/type'
 import { useGenerationStore } from '@/store/useGenerationStore'
 import { Slider } from '@/components/ui/slider'
@@ -36,6 +36,54 @@ const SUGGESTED_TOPICS = [
   'Understanding Quantum Computing',
   'The History of Cinema'
 ]
+
+const AUDIENCE_STYLES = [
+  {
+    id: 'students',
+    name: 'Students',
+    description:
+      'Friendly and relatable tone with concrete examples and simple language.',
+    contentStyle: 'storytelling',
+    personalizedStyle:
+      'friendly and simple language with specific examples for students'
+  },
+  {
+    id: 'technical_experts',
+    name: 'Technical Experts',
+    description:
+      'Accurate explanations using technical terminology and clear logic.',
+    contentStyle: 'analysis',
+    personalizedStyle:
+      'technical terminology with precise and logical explanations'
+  },
+  {
+    id: 'beginners',
+    name: 'Beginners',
+    description:
+      'Thorough explanations without abbreviations, using visual aids if needed.',
+    contentStyle: 'analysis',
+    personalizedStyle:
+      'detailed explanations without abbreviations, suitable for beginners'
+  },
+  {
+    id: 'elderly',
+    name: 'Elderly',
+    description:
+      'Clear and easy-to-understand content with concise and straightforward explanations.',
+    contentStyle: 'storytelling',
+    personalizedStyle:
+      'clear, concise content with straightforward language for elderly readers'
+  },
+  {
+    id: 'children',
+    name: 'Children',
+    description:
+      'Fun and engaging content with short sentences and vivid imagery.',
+    contentStyle: 'storytelling',
+    personalizedStyle: 'fun, engaging content with short sentences for children'
+  }
+]
+
 const SCENE_COUNT_OPTIONS = [3, 5, 7, 10]
 
 export default function LiteraryCreator({
@@ -66,7 +114,7 @@ export default function LiteraryCreator({
   const [scriptEdited, setScriptEdited] = useState(false)
 
   // Track overall completion
-  const [isComplete, setIsComplete] = useState(false)
+  // const [isComplete, setIsComplete] = useState(false)
   const [error, setError] = useState('')
 
   // Scence count
@@ -75,15 +123,50 @@ export default function LiteraryCreator({
   const [isCustomSceneCount, setIsCustomSceneCount] = useState(false)
   const [sceneCountSelected, setSceneCountSelected] = useState(true)
 
+  // Personalize the script
+  const [personalizeStyle, setPersonalizeStyle] = useState(false)
+  const [personalizedStyleInput, setPersonalizedStyleInput] = useState('')
+
+  // Style for group audience
+  const [useAudienceStyle, setUseAudienceStyle] = useState(false)
+  const [selectedAudience, setSelectedAudience] = useState<string | null>(null)
+
   const { setStory } = useGenerationStore()
 
   // Update completion status when script is approved
   useEffect(() => {
     if (isScriptApproved) {
-      setIsComplete(true)
       onComplete()
     }
   }, [isScriptApproved, onComplete])
+
+  const handleAudienceSelect = (audienceId: string) => {
+    setSelectedAudience(audienceId)
+
+    const selectedAudienceStyle = AUDIENCE_STYLES.find(
+      audience => audience.id === audienceId
+    )
+
+    if (selectedAudienceStyle) {
+      setContentStyle(selectedAudienceStyle.contentStyle)
+      setPersonalizedStyleInput(selectedAudienceStyle.personalizedStyle)
+      setPersonalizeStyle(true)
+      setStyleSelected(true)
+    }
+  }
+
+  const handleToggleAudienceStyle = () => {
+    const newValue = !useAudienceStyle
+    setUseAudienceStyle(newValue)
+
+    if (!newValue) {
+      setSelectedAudience(null)
+      setContentStyle('analysis')
+      setPersonalizeStyle(false)
+      setPersonalizedStyleInput('')
+      setStyleSelected(false)
+    }
+  }
 
   const handleTopicSelect = (selectedTopic: string) => {
     setTopic(selectedTopic)
@@ -121,6 +204,7 @@ export default function LiteraryCreator({
         body: JSON.stringify({
           topic,
           type: contentStyle,
+          // personalStyle: personalizedStyleInput,
           sceneCount
         })
       })
@@ -508,32 +592,124 @@ export default function LiteraryCreator({
                   ))}
                 </div>
 
-                <div className='mt-6'>
-                  <Label>Content Style</Label>
-                  <RadioGroup
-                    value={contentStyle}
-                    onValueChange={handleContentStyleChange}
-                    className='mt-2 flex flex-col space-y-2'
-                  >
-                    <div className='flex items-center space-x-2'>
-                      <RadioGroupItem value='analysis' id='analysis' />
-                      <Label htmlFor='analysis'>
-                        Analysis - Detailed examination of the topic
-                      </Label>
+                <div className='mt-6 border-t pt-4'>
+                  <div className='mb-4 flex items-center space-x-2'>
+                    <input
+                      type='checkbox'
+                      id='audience-style'
+                      checked={useAudienceStyle}
+                      onChange={handleToggleAudienceStyle}
+                      className='rounded border-gray-300'
+                    />
+                    <Label htmlFor='audience-style' className='font-medium'>
+                      <Users className='mr-2 inline-block h-4 w-4' />
+                      Customize style based on audience
+                    </Label>
+                  </div>
+
+                  {useAudienceStyle ? (
+                    <div className='space-y-4'>
+                      <p className='text-sm text-muted-foreground'>
+                        Select your target audience to automatically set the
+                        appropriate writing style
+                      </p>
+                      <div className='grid grid-cols-1 gap-3'>
+                        {AUDIENCE_STYLES.map(audience => (
+                          <Card
+                            key={audience.id}
+                            className={`cursor-pointer transition-colors hover:border-primary ${selectedAudience === audience.id ? 'border-primary bg-primary/10' : ''}`}
+                            onClick={() => handleAudienceSelect(audience.id)}
+                          >
+                            <CardContent className='p-4'>
+                              <div className='flex items-center justify-between'>
+                                <div>
+                                  <h3 className='font-medium'>
+                                    {audience.name}
+                                  </h3>
+                                  <p className='text-sm text-muted-foreground'>
+                                    {audience.description}
+                                  </p>
+                                </div>
+                                {selectedAudience === audience.id && (
+                                  <Check className='h-5 w-5 text-primary' />
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
                     </div>
-                    <div className='flex items-center space-x-2'>
-                      <RadioGroupItem value='storytelling' id='storytelling' />
-                      <Label htmlFor='storytelling'>
-                        Storytelling - Narrative approach to the topic
-                      </Label>
+                  ) : (
+                    <div className='mt-4'>
+                      <Label>Content Style</Label>
+                      <RadioGroup
+                        value={contentStyle}
+                        onValueChange={handleContentStyleChange}
+                        className='mt-2 flex flex-col space-y-2'
+                      >
+                        <div className='flex items-center space-x-2'>
+                          <RadioGroupItem value='analysis' id='analysis' />
+                          <Label htmlFor='analysis'>
+                            Analysis - Detailed examination of the topic
+                          </Label>
+                        </div>
+                        <div className='flex items-center space-x-2'>
+                          <RadioGroupItem
+                            value='storytelling'
+                            id='storytelling'
+                          />
+                          <Label htmlFor='storytelling'>
+                            Storytelling - Narrative approach to the topic
+                          </Label>
+                        </div>
+                        <div className='flex items-center space-x-2'>
+                          <RadioGroupItem value='poetry' id='poetry' />
+                          <Label htmlFor='poetry'>
+                            Poetry Illustration - Artistic interpretation
+                          </Label>
+                        </div>
+                      </RadioGroup>
+
+                      {/* Tùy chọn cá nhân hóa phong cách viết */}
+                      <div className='mt-4 border-t pt-4'>
+                        <div className='mb-2 flex items-center space-x-2'>
+                          <input
+                            type='checkbox'
+                            id='personalize-style'
+                            checked={personalizeStyle}
+                            onChange={() =>
+                              setPersonalizeStyle(!personalizeStyle)
+                            }
+                            className='rounded border-gray-300'
+                          />
+                          <Label htmlFor='personalize-style'>
+                            Personalize writing style
+                          </Label>
+                        </div>
+
+                        {personalizeStyle && (
+                          <div className='mt-2'>
+                            <Label
+                              htmlFor='personalized-style-input'
+                              className='text-sm'
+                            >
+                              Write in the style of (e.g., "Ernest Hemingway",
+                              "a tech blog", "a fairy tale")
+                            </Label>
+                            <Input
+                              id='personalized-style-input'
+                              placeholder='Enter a writing style or author'
+                              value={personalizedStyleInput}
+                              onChange={e =>
+                                setPersonalizedStyleInput(e.target.value)
+                              }
+                              className='mt-1'
+                            />
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className='flex items-center space-x-2'>
-                      <RadioGroupItem value='poetry' id='poetry' />
-                      <Label htmlFor='poetry'>
-                        Poetry Illustration - Artistic interpretation
-                      </Label>
-                    </div>
-                  </RadioGroup>
+                  )}
                 </div>
 
                 <div className='mt-6'>

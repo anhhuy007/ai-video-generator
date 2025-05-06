@@ -22,7 +22,6 @@ export default function VideoForm() {
 
     if (selectedFile) {
       try {
-        // Lấy duration của video
         const videoDuration = await getVideoDuration(selectedFile)
         setDuration(Math.round(videoDuration))
       } catch (err) {
@@ -31,7 +30,6 @@ export default function VideoForm() {
     }
   }
 
-  // Hàm để lấy thời lượng của video
   const getVideoDuration = (file: File): Promise<number> => {
     return new Promise((resolve, reject) => {
       const video = document.createElement('video')
