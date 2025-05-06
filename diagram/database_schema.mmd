@@ -1,33 +1,32 @@
 erDiagram
-    users {
-        UUID id PK
-        TEXT google_id
-        TEXT email
-        TEXT name
-        TEXT avatar_url
-        TIMESTAMP created_at
-        TIMESTAMP updated_at
-    }
-
-    gallery {
-        UUID id PK
-        TEXT video_url
-        TEXT title
-        UUID added_by FK
-        TIMESTAMP created_at
-        INTEGER duration
-        TEXT quality
-        TEXT category
-    }
-
-    gen_history {
-        UUID id PK
-        UUID user_id FK
-        TEXT prompt
-        UUID gallery_id FK
-        TIMESTAMP created_at
-    }
-
     users ||--o{ gallery : "added_by"
     users ||--o{ gen_history : "user_id"
     gallery ||--o{ gen_history : "gallery_id"
+
+    users {
+        uuid id PK
+        string google_id UK
+        string email UK
+        string name
+        string avatar_url
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    gallery {
+        uuid id PK
+        string video_url UK
+        string title
+        uuid added_by FK
+        timestamp created_at
+        integer duration
+        string category
+    }
+
+    gen_history {
+        uuid id PK
+        uuid user_id FK
+        string prompt
+        uuid gallery_id FK
+        timestamp created_at
+    }

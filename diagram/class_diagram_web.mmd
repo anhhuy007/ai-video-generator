@@ -1,0 +1,131 @@
+
+classDiagram
+
+    %% Entities
+    class User {
+        +UUID id
+        +TEXT google_id
+        +TEXT email
+        +TEXT name
+        +TEXT avatar_url
+        +TIMESTAMP created_at
+        +TIMESTAMP updated_at
+        +createGoogleUser(googleId, email, name?, avatarUrl?)
+        +createUser(googleId, email, name?, avatarUrl?)
+        +updateUser(userId, email?, name?, avatarUrl?)
+        +deleteUser(userId)
+        +getUserByGoogleId(googleId)
+        +getUserById(userId)
+    }
+
+    class Gallery {
+        +UUID id
+        +TEXT video_url
+        +TEXT title
+        +UUID added_by
+        +TIMESTAMP created_at
+        +INTEGER duration
+        +TEXT category
+        +createGalleryEntry(videoUrl, title, userId, category?, duration)
+        +getGalleryEntries()
+        +getTopGallery()
+        +getGalleryEntryById(galleryId)
+        +updateGalleryEntry(galleryId, videoUrl?, title?, category?, duration?)
+        +deleteGalleryEntry(galleryId)
+    }
+
+    class GenHistory {
+        +UUID id
+        +UUID user_id
+        +TEXT prompt
+        +UUID gallery_id
+        +TIMESTAMP created_at
+        +createGenHistory(googleId, prompt, galleryId?)
+        +getGenHistoryForUser(googleId)
+        +getGenHistoryForGallery(galleryId)
+        +getGenHistoryForGalleryHome()
+        +getGenHistoryById(historyId)
+        +deleteGenHistory(historyId)
+    }
+
+    %% Services
+    class UserService {
+        +Object db
+        +createGoogleUser(googleId, email, name?, avatarUrl?)
+        +createUser(googleId, email, name?, avatarUrl?)
+        +updateUser(userId, email?, name?, avatarUrl?)
+        +deleteUser(userId)
+        +getUserByGoogleId(googleId)
+        +getUserById(userId)
+    }
+
+    class GalleryService {
+        +Object db
+        +createGalleryEntry(videoUrl, title, userId, category?, duration)
+        +getGalleryEntries()
+        +getTopGallery()
+        +getGalleryEntryById(galleryId)
+        +getStatistics(userId)
+        +getPromptStatistics(userId)
+        +updateGalleryEntry(galleryId, videoUrl?, title?, category?, duration?)
+        +deleteGalleryEntry(galleryId)
+    }
+
+    class GenHistoryService {
+        +Object db
+        +createGenHistory(googleId, prompt, galleryId?)
+        +getGenHistoryForUser(googleId)
+        +getGenHistoryForGallery(galleryId)
+        +getGenHistoryForGalleryHome()
+        +getGenHistoryById(historyId)
+        +deleteGenHistory(historyId)
+    }
+
+    class StatisticsService {
+        +Object db
+        +Object cache
+        +getStatistics(userId)
+        +getPromptStatistics(userId)
+        +getUsageTrends(userId, timeframe)
+    }
+
+    class UsageService {
+        +Object db
+        +Object cache
+        +getUserUsageStatistics(userId, timeframe?)
+        +getVideoDetails(videoId, userId)
+        +getMetricComparison(userId, metric)
+        +getUserRecommendations(userId)
+        +getUsageSummary(userId)
+    }
+
+    class YouTubeService {
+        +Object oauth2Client
+        +Object clientConfig
+        +getAuthUrl()
+        +getToken(code)
+        +setToken(tokens)
+        +uploadVideo(videoFile, metadata)
+        +getVideoStatus(videoId)
+    }
+
+    %% Relationships
+    User "1" -- "0..*" GenHistory : user_id
+    User "1" -- "0..*" Gallery : added_by
+    Gallery "1" -- "0..*" GenHistory : gallery_id
+
+    %% Service Interactions
+    UserService --> User : manages
+    GalleryService --> Gallery : manages
+    GalleryService --> GenHistory : queries
+    GalleryService --> User : queries
+    GenHistoryService --> GenHistory : manages
+    GenHistoryService --> User : queries
+    GenHistoryService --> Gallery : queries
+    StatisticsService --> User : queries
+    StatisticsService --> Gallery : queries
+    StatisticsService --> GenHistory : queries
+    UsageService --> User : queries
+    UsageService --> Gallery : queries
+    UsageService --> GenHistory : queries
+    YouTubeService --> Gallery : uploads videos for
