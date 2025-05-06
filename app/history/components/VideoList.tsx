@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
+import { formatDistanceToNow } from 'date-fns'
+import { Clock, MessageSquare } from 'lucide-react'
 
 interface GenHistory {
   id: string
@@ -35,17 +37,17 @@ export default function VideoList() {
       setLoading(true)
       setError('')
       try {
-        // Lấy thông tin user ID từ session
+        // Get user ID from session
         if (session?.user?.id) {
           setUserId(session.user.id)
-          console.log('User ID đang xem lịch sử:', session.user.id)
+          console.log('User ID viewing history:', session.user.id)
         }
 
         const response = await fetch('/api/gen_history')
 
         if (!response.ok) {
           const data = await response.json()
-          throw new Error(data.error || 'Lỗi khi tải lịch sử')
+          throw new Error(data.error || 'Error loading history')
         }
 
         const data = await response.json()
@@ -76,11 +78,11 @@ export default function VideoList() {
 
         setGalleryEntries(galleryData)
       } catch (error) {
-        console.error('Lỗi:', error)
+        console.error('Error:', error)
         setError(
           error instanceof Error
             ? error.message
-            : 'Đã xảy ra lỗi khi tải dữ liệu'
+            : 'An error occurred while loading data'
         )
       } finally {
         setLoading(false)
@@ -90,8 +92,17 @@ export default function VideoList() {
     fetchHistories()
   }, [session])
 
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString)
+      return formatDistanceToNow(date, { addSuffix: true })
+    } catch (error) {
+      return dateString
+    }
+  }
+
   if (loading) {
-    return <div className='py-6 text-center'>Đang tải dữ liệu...</div>
+    return <div className='py-6 text-center'>Loading data...</div>
   }
 
   if (error) {
@@ -106,7 +117,7 @@ export default function VideoList() {
     <div className='h-full overflow-y-auto pb-6'>
       {genHistories.length === 0 ? (
         <div className='py-6 text-center'>
-          Không tìm thấy lịch sử video nào cho tài khoản này.
+          No video history found for this account.
         </div>
       ) : (
         <div className='grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3'>
@@ -135,10 +146,22 @@ export default function VideoList() {
                     }}
                   />
                 </div>
-                <div className='p-3'>
-                  <h3 className='truncate text-base font-medium'>
+                <div className='p-4'>
+                  <h3 className='truncate text-base font-semibold'>
                     {galleryEntry.title}
                   </h3>
+
+                  <div className='mt-2 flex items-start gap-2'>
+                    <MessageSquare className='mt-1 h-4 w-4 flex-shrink-0 text-gray-500' />
+                    <p className='line-clamp-2 text-sm text-gray-600'>
+                      {history.prompt}
+                    </p>
+                  </div>
+
+                  <div className='mt-2 flex items-center text-xs text-gray-500'>
+                    <Clock className='mr-1.5 h-3.5 w-3.5 text-gray-400' />
+                    <span>{formatDate(galleryEntry.created_at)}</span>
+                  </div>
                 </div>
               </Link>
             )

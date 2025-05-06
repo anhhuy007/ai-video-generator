@@ -1,202 +1,456 @@
 'use server'
 // app/service/usage.service.ts
 import { sql } from '@/app/utils/database'
+import { cache } from 'react'
 
-export async function getUserUsageStatistics(userId: string) {
+// Hàm chuyển đổi giây sang phút
+const secondsToMinutes = (seconds: number): number => seconds / 60
+
+export interface UsageStatistics {
+  totalVideos: number
+  totalDuration: number // Đơn vị: giây
+  longestVideo: { title: string; duration: number } | null // Đơn vị: giây
+  avgDuration: number // Đơn vị: giây
+  productiveDay: string
+  mostUsedCategory: string
+  lastGeneration: string | null
+  firstGeneration: string | null
+  promptsUsed: number
+  monthlyTrends: { month: number; count: number }[]
+  peakDay: string
+  peakTime: string
+  weeklyDistribution: number[]
+  timeDistribution: {
+    morning: number
+    afternoon: number
+    evening: number
+    night: number
+  }
+  planUsage: number // Phần trăm sử dụng gói
+  planLimit: string // Giới hạn (phút/tháng)
+  planExpiry: string
+  planType: string
+  countTrend: number
+  eveningUsagePercentage: number
+  recentVideos: {
+    id: string
+    title: string
+    duration: number
+    category: string | null
+    createdAt: string
+  }[] // Đơn vị: giây
+  durationDistribution: { short: number; medium: number; long: number }
+}
+
+export interface VideoDetails {
+  id: string
+  title: string
+  duration: number // Đơn vị: giây
+  category: string | null
+  createdAt: string
+  prompt: string
+}
+
+export interface MetricComparison {
+  metric: string
+  userValue: number
+  averageValue: number
+  percentile: number
+  isAboveAverage: boolean
+}
+
+const getTimeCondition = (timeframe: string) => {
+  switch (timeframe) {
+    case 'week':
+      return "gh.created_at >= CURRENT_DATE - INTERVAL '7 days'"
+    case 'month':
+      return "gh.created_at >= CURRENT_DATE - INTERVAL '30 days'"
+    case 'year':
+      return "gh.created_at >= CURRENT_DATE - INTERVAL '365 days'"
+    default:
+      return ''
+  }
+}
+
+const fetchCoreStats = async (userId: string, timeCondition: string) => {
+  const statsResult = await sql`
+    SELECT 
+      COUNT(*) as total_videos,
+      SUM(g.duration) as total_duration,
+      AVG(g.duration) as avg_duration,
+      MAX(g.duration) as max_duration,
+      (SELECT g.title FROM gallery g JOIN gen_history gh ON g.id = gh.gallery_id WHERE g.duration = (SELECT MAX(duration) FROM gallery WHERE id = gh.gallery_id) AND gh.user_id = (SELECT id FROM users WHERE google_id = ${userId}) LIMIT 1) as longest_title,
+      COUNT(DISTINCT gh.prompt) as prompts_used
+    FROM gallery g
+    JOIN gen_history gh ON g.id = gh.gallery_id
+    JOIN users u ON gh.user_id = u.id
+    WHERE u.google_id = ${userId}
+    ${timeCondition ? sql`AND ${sql.unsafe(getTimeCondition(timeframe))}` : sql``}
+  `
+  return statsResult[0] || {}
+}
+
+const fetchTimeBasedStats = async (userId: string) => {
+  const timeStats = await sql`
+    SELECT 
+      TO_CHAR(gh.created_at, 'Day') as productive_day,
+      COUNT(*) as day_count,
+      EXTRACT(DOW FROM gh.created_at) as peak_day,
+      EXTRACT(HOUR FROM gh.created_at) as peak_hour,
+      COUNT(*) FILTER (WHERE EXTRACT(HOUR FROM gh.created_at) BETWEEN 5 AND 11) as morning,
+      COUNT(*) FILTER (WHERE EXTRACT(HOUR FROM gh.created_at) BETWEEN 12 AND 17) as afternoon,
+      COUNT(*) FILTER (WHERE EXTRACT(HOUR FROM gh.created_at) BETWEEN 18 AND 23) as evening,
+      COUNT(*) FILTER (WHERE EXTRACT(HOUR FROM gh.created_at) BETWEEN 0 AND 4 OR EXTRACT(HOUR FROM gh.created_at) = 24) as night
+    FROM gen_history gh
+    JOIN users u ON gh.user_id = u.id
+    WHERE u.google_id = ${userId}
+    AND gh.created_at >= CURRENT_DATE - INTERVAL '30 days'
+    GROUP BY productive_day, peak_day, peak_hour
+    ORDER BY day_count DESC
+    LIMIT 1;
+  `
+  return timeStats[0] || {}
+}
+
+const fetchAdditionalStats = async (userId: string, timeCondition: string) => {
+  const [categoryResult, lastGenResult, firstGenResult, monthlyTrendsResult] =
+    await Promise.all([
+      sql`SELECT g.category, COUNT(*) as count FROM gallery g JOIN gen_history gh ON g.id = gh.gallery_id JOIN users u ON gh.user_id = u.id WHERE u.google_id = ${userId} AND g.category IS NOT NULL ${timeCondition ? sql`AND ${sql.unsafe(getTimeCondition(timeframe))}` : sql``} GROUP BY g.category ORDER BY count DESC LIMIT 1;`,
+      sql`SELECT gh.created_at FROM gen_history gh JOIN users u ON gh.user_id = u.id WHERE u.google_id = ${userId} ORDER BY gh.created_at DESC LIMIT 1;`,
+      sql`SELECT gh.created_at FROM gen_history gh JOIN users u ON gh.user_id = u.id WHERE u.google_id = ${userId} ORDER BY gh.created_at ASC LIMIT 1;`,
+      sql`SELECT EXTRACT(MONTH FROM gh.created_at) as month, COUNT(*) as count FROM gen_history gh JOIN users u ON gh.user_id = u.id WHERE u.google_id = ${userId} AND EXTRACT(YEAR FROM gh.created_at) = EXTRACT(YEAR FROM CURRENT_DATE) ${timeCondition ? sql`AND ${sql.unsafe(getTimeCondition(timeframe))}` : sql``} GROUP BY month ORDER BY month;`
+    ])
+
+  // Sử dụng giá trị mặc định vì không có bảng user_subscriptions
+  const defaultPlan = {
+    plan_type: 'Free',
+    plan_limit: 100, // Giới hạn 100 phút/tháng
+    expiry_date: '2025-12-31 00:00:00'
+  }
+
+  return {
+    category: categoryResult[0] || { category: 'N/A', count: 0 },
+    lastGeneration: lastGenResult[0]?.created_at || null,
+    firstGeneration: firstGenResult[0]?.created_at || null,
+    monthlyTrends: monthlyTrendsResult.map(item => ({
+      month: parseInt(item.month),
+      count: parseInt(item.count)
+    })),
+    plan: defaultPlan
+  }
+}
+
+const fetchDistributionStats = async (
+  userId: string,
+  timeCondition: string
+) => {
+  const [weeklyResult, recentVideosResult, durationResult] = await Promise.all([
+    sql`SELECT EXTRACT(DOW FROM gh.created_at) as day_of_week, COUNT(*) as count FROM gen_history gh JOIN users u ON gh.user_id = u.id WHERE u.google_id = ${userId} AND gh.created_at >= CURRENT_DATE - INTERVAL '30 days' GROUP BY day_of_week ORDER BY day_of_week;`,
+    sql`SELECT g.id, g.title, g.duration, g.category, gh.created_at FROM gallery g JOIN gen_history gh ON g.id = gh.gallery_id JOIN users u ON gh.user_id = u.id WHERE u.google_id = ${userId} ${timeCondition ? sql`AND ${sql.unsafe(getTimeCondition(timeframe))}` : sql``} ORDER BY gh.created_at DESC LIMIT 5;`,
+    sql`SELECT CASE WHEN duration < 30 THEN 'short' WHEN duration BETWEEN 30 AND 120 THEN 'medium' ELSE 'long' END as length_category, COUNT(*) as count FROM gallery g JOIN gen_history gh ON g.id = gh.gallery_id JOIN users u ON gh.user_id = u.id WHERE u.google_id = ${userId} ${timeCondition ? sql`AND ${sql.unsafe(getTimeCondition(timeframe))}` : sql``} GROUP BY length_category;`
+  ])
+
+  const weeklyDistribution = new Array(7).fill(0)
+  weeklyResult.forEach(item => {
+    weeklyDistribution[parseInt(item.day_of_week)] = parseInt(item.count)
+  })
+
+  const recentVideos = recentVideosResult.map(item => ({
+    id: item.id,
+    title: item.title,
+    duration: parseFloat(item.duration || '0'), // Đơn vị: giây
+    category: item.category,
+    createdAt: item.created_at
+  }))
+
+  const durationDistribution = { short: 0, medium: 0, long: 0 }
+  durationResult.forEach(item => {
+    durationDistribution[item.length_category] = parseInt(item.count)
+  })
+
+  return { weeklyDistribution, recentVideos, durationDistribution }
+}
+
+const calculateTrends = async (userId: string) => {
+  const [previousMonthCount, currentMonthCount] = await Promise.all([
+    sql`SELECT COUNT(*) as count FROM gen_history gh JOIN users u ON gh.user_id = u.id WHERE u.google_id = ${userId} AND gh.created_at BETWEEN CURRENT_DATE - INTERVAL '60 days' AND CURRENT_DATE - INTERVAL '30 days';`,
+    sql`SELECT COUNT(*) as count FROM gen_history gh JOIN users u ON gh.user_id = u.id WHERE u.google_id = ${userId} AND gh.created_at >= CURRENT_DATE - INTERVAL '30 days';`
+  ])
+
+  const previousCount = parseInt(previousMonthCount[0]?.count || '0')
+  const currentCount = parseInt(currentMonthCount[0]?.count || '0')
+  let countTrend = 0
+  if (previousCount > 0) {
+    countTrend = Math.round(
+      ((currentCount - previousCount) / previousCount) * 100
+    )
+  } else if (currentCount > 0) {
+    countTrend = 100
+  }
+  return countTrend
+}
+
+export const getUserUsageStatistics = cache(
+  async (
+    userId: string,
+    timeframe: string = 'all'
+  ): Promise<UsageStatistics> => {
+    try {
+      const timeCondition = getTimeCondition(timeframe)
+
+      const coreStats = await fetchCoreStats(userId, timeCondition)
+      const totalVideos = parseInt(coreStats.total_videos || '0')
+      const totalDuration = parseFloat(coreStats.total_duration || '0') // Đơn vị: giây
+      const avgDuration = parseFloat(coreStats.avg_duration || '0') // Đơn vị: giây
+      const longestVideo = coreStats.max_duration
+        ? {
+            title: coreStats.longest_title || 'N/A',
+            duration: parseFloat(coreStats.max_duration)
+          } // Đơn vị: giây
+        : null
+      const promptsUsed = parseInt(coreStats.prompts_used || '0')
+
+      const timeStats = await fetchTimeBasedStats(userId)
+      const productiveDay = timeStats?.productive_day?.trim() || 'N/A'
+      const peakDay = timeStats?.peak_day
+        ? ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'][
+            parseInt(timeStats.peak_day)
+          ]
+        : 'N/A'
+      const peakTime = timeStats?.peak_hour
+        ? `${timeStats.peak_hour}:00 - ${(parseInt(timeStats.peak_hour) + 1) % 24}:00`
+        : 'N/A'
+      const timeDistribution = {
+        morning: parseInt(timeStats?.morning || '0'),
+        afternoon: parseInt(timeStats?.afternoon || '0'),
+        evening: parseInt(timeStats?.evening || '0'),
+        night: parseInt(timeStats?.night || '0')
+      }
+
+      const additionalStats = await fetchAdditionalStats(userId, timeCondition)
+      const mostUsedCategory = additionalStats.category.category || 'N/A'
+      const lastGeneration = additionalStats.lastGeneration
+      const firstGeneration = additionalStats.firstGeneration
+      const monthlyTrends = additionalStats.monthlyTrends
+      const plan = additionalStats.plan
+
+      let planLimit = `${plan.plan_limit} phút/tháng` // Giới hạn ở phút
+      let planExpiry = '31/12/2025'
+      let planType = plan.plan_type
+      const planLimitSeconds = plan.plan_limit * 60 // Chuyển đổi giới hạn từ phút sang giây
+      const planUsage = Math.min(
+        Math.round((totalDuration / planLimitSeconds) * 100),
+        100
+      ) // Tính phần trăm dựa trên giây
+
+      const distributionStats = await fetchDistributionStats(
+        userId,
+        timeCondition
+      )
+      const weeklyDistribution = distributionStats.weeklyDistribution
+      const recentVideos = distributionStats.recentVideos
+      const durationDistribution = distributionStats.durationDistribution
+
+      const totalTimeCount =
+        timeDistribution.morning +
+        timeDistribution.afternoon +
+        timeDistribution.evening +
+        timeDistribution.night
+      const eveningUsagePercentage =
+        totalTimeCount > 0
+          ? Math.round((timeDistribution.evening / totalTimeCount) * 100)
+          : 0
+
+      const countTrend = await calculateTrends(userId)
+
+      return {
+        totalVideos,
+        totalDuration, // Đơn vị: giây
+        longestVideo, // Đơn vị: giây
+        avgDuration, // Đơn vị: giây
+        productiveDay,
+        mostUsedCategory,
+        lastGeneration,
+        firstGeneration,
+        promptsUsed,
+        monthlyTrends,
+        peakDay,
+        peakTime,
+        weeklyDistribution,
+        timeDistribution,
+        planUsage,
+        planLimit,
+        planExpiry,
+        planType,
+        countTrend,
+        eveningUsagePercentage,
+        recentVideos, // Đơn vị: giây
+        durationDistribution
+      }
+    } catch (error) {
+      console.error('Error fetching usage statistics:', {
+        message: error.message,
+        stack: error.stack
+      })
+      throw new Error('Failed to fetch usage statistics')
+    }
+  }
+)
+
+export async function getVideoDetails(
+  videoId: string,
+  userId: string
+): Promise<VideoDetails | null> {
   try {
-    // Get total videos created
-    const totalVideosResult = await sql`
-      SELECT COUNT(*) as total
+    const videoResult = await sql`
+      SELECT g.id, g.title, g.duration, g.category, gh.created_at, gh.prompt
       FROM gallery g
       JOIN gen_history gh ON g.id = gh.gallery_id
       JOIN users u ON gh.user_id = u.id
-      WHERE u.google_id = ${userId};
-    `
-    const totalVideos = parseInt(totalVideosResult[0]?.total || '0')
-
-    // Get total duration
-    const totalDurationResult = await sql`
-      SELECT SUM(duration) as total
-      FROM gallery g
-      JOIN gen_history gh ON g.id = gh.gallery_id
-      JOIN users u ON gh.user_id = u.id
-      WHERE u.google_id = ${userId};
-    `
-    const totalDuration = parseFloat(totalDurationResult[0]?.total || '0')
-
-    // Get last generation time
-    const lastGenResult = await sql`
-      SELECT gh.created_at
-      FROM gen_history gh
-      JOIN users u ON gh.user_id = u.id
-      WHERE u.google_id = ${userId}
-      ORDER BY gh.created_at DESC
-      LIMIT 1;
-    `
-    const lastGeneration = lastGenResult[0]?.created_at || null
-
-    // Total prompts used
-    const promptsUsedResult = await sql`
-      SELECT COUNT(DISTINCT prompt) as total
-      FROM gen_history gh
-      JOIN users u ON gh.user_id = u.id
-      WHERE u.google_id = ${userId};
-    `
-    const promptsUsed = parseInt(promptsUsedResult[0]?.total || '0')
-
-    // Find peak day with more accurate counting
-    const peakDayResult = await sql`
-      SELECT 
-        EXTRACT(DOW FROM gh.created_at) as day_of_week,
-        COUNT(*) as count
-      FROM gen_history gh
-      JOIN users u ON gh.user_id = u.id
-      WHERE u.google_id = ${userId}
-      AND gh.created_at >= CURRENT_DATE - INTERVAL '30 days'
-      GROUP BY day_of_week
-      ORDER BY count DESC
-      LIMIT 1;
-    `
-    const dayOfWeekMap = [
-      'Chủ nhật',
-      'Thứ 2',
-      'Thứ 3',
-      'Thứ 4',
-      'Thứ 5',
-      'Thứ 6',
-      'Thứ 7'
-    ]
-    const peakDay = peakDayResult[0]?.day_of_week
-      ? dayOfWeekMap[parseInt(peakDayResult[0].day_of_week)]
-      : 'Không có dữ liệu'
-
-    // Find peak time
-    const peakTimeResult = await sql`
-      SELECT 
-        EXTRACT(HOUR FROM gh.created_at) as hour,
-        COUNT(*) as count
-      FROM gen_history gh
-      JOIN users u ON gh.user_id = u.id
-      WHERE u.google_id = ${userId}
-      AND gh.created_at >= CURRENT_DATE - INTERVAL '30 days'
-      GROUP BY hour
-      ORDER BY count DESC
-      LIMIT 1;
-    `
-    const peakHour = peakTimeResult[0]?.hour
-      ? parseInt(peakTimeResult[0].hour)
-      : null
-    const peakTime =
-      peakHour !== null
-        ? `${peakHour}:00 - ${(peakHour + 1) % 24}:00`
-        : 'Không có dữ liệu'
-
-    // Calculate usage trends - for the past 30 days vs previous 30 days
-    const previousMonthCount = await sql`
-      SELECT COUNT(*) as count
-      FROM gen_history gh
-      JOIN users u ON gh.user_id = u.id
-      WHERE u.google_id = ${userId}
-      AND gh.created_at BETWEEN CURRENT_DATE - INTERVAL '60 days' AND CURRENT_DATE - INTERVAL '30 days';
+      WHERE g.id = ${videoId} AND u.google_id = ${userId}
     `
 
-    const currentMonthCount = await sql`
-      SELECT COUNT(*) as count
-      FROM gen_history gh
-      JOIN users u ON gh.user_id = u.id
-      WHERE u.google_id = ${userId}
-      AND gh.created_at >= CURRENT_DATE - INTERVAL '30 days';
-    `
+    if (videoResult.length === 0) {
+      return null
+    }
 
-    const previousCount = parseInt(previousMonthCount[0]?.count || '0')
-    const currentCount = parseInt(currentMonthCount[0]?.count || '0')
+    return {
+      id: videoResult[0].id,
+      title: videoResult[0].title,
+      duration: parseFloat(videoResult[0].duration || '0'), // Đơn vị: giây
+      category: videoResult[0].category,
+      createdAt: videoResult[0].created_at,
+      prompt: videoResult[0].prompt
+    }
+  } catch (error) {
+    console.error('Error fetching video details:', {
+      message: error.message,
+      stack: error.stack
+    })
+    throw new Error('Failed to fetch video details')
+  }
+}
 
-    // Calculate percentage change
-    let countTrend = 0
-    if (previousCount > 0) {
-      countTrend = Math.round(
-        ((currentCount - previousCount) / previousCount) * 100
+export async function getMetricComparison(
+  userId: string,
+  metric: string
+): Promise<MetricComparison | null> {
+  try {
+    if (!['totalVideos', 'totalDuration', 'avgDuration'].includes(metric)) {
+      throw new Error('Invalid metric')
+    }
+
+    let userValueResult
+    if (metric === 'totalVideos') {
+      userValueResult =
+        await sql`SELECT COUNT(*) as value FROM gallery g JOIN gen_history gh ON g.id = gh.gallery_id JOIN users u ON gh.user_id = u.id WHERE u.google_id = ${userId}`
+    } else if (metric === 'totalDuration') {
+      userValueResult =
+        await sql`SELECT SUM(duration) as value FROM gallery g JOIN gen_history gh ON g.id = gh.gallery_id JOIN users u ON gh.user_id = u.id WHERE u.google_id = ${userId}`
+    } else if (metric === 'avgDuration') {
+      userValueResult =
+        await sql`SELECT AVG(duration) as value FROM gallery g JOIN gen_history gh ON g.id = gh.gallery_id JOIN users u ON gh.user_id = u.id WHERE u.google_id = ${userId}`
+    }
+    const userValue = parseFloat(userValueResult[0]?.value || '0')
+
+    let avgValueResult
+    if (metric === 'totalVideos') {
+      avgValueResult =
+        await sql`SELECT AVG(user_count) as avg_value FROM (SELECT u.id, COUNT(*) as user_count FROM gallery g JOIN gen_history gh ON g.id = gh.gallery_id JOIN users u ON gh.user_id = u.id GROUP BY u.id) as user_counts`
+    } else if (metric === 'totalDuration') {
+      avgValueResult =
+        await sql`SELECT AVG(user_duration) as avg_value FROM (SELECT u.id, SUM(duration) as user_duration FROM gallery g JOIN gen_history gh ON g.id = gh.gallery_id JOIN users u ON gh.user_id = u.id GROUP BY u.id) as user_durations`
+    } else if (metric === 'avgDuration') {
+      avgValueResult =
+        await sql`SELECT AVG(user_avg) as avg_value FROM (SELECT u.id, AVG(duration) as user_avg FROM gallery g JOIN gen_history gh ON g.id = gh.gallery_id JOIN users u ON gh.user_id = u.id GROUP BY u.id) as user_avgs`
+    }
+    const avgValue = parseFloat(avgValueResult[0]?.avg_value || '0')
+
+    const percentileResult = await sql`
+      WITH user_metrics AS (
+        SELECT u.id, 
+          ${metric === 'totalVideos' ? 'COUNT(*)' : metric === 'totalDuration' ? 'SUM(duration)' : 'AVG(duration)'} as metric_value
+        FROM gallery g
+        JOIN gen_history gh ON g.id = gh.gallery_id
+        JOIN users u ON gh.user_id = u.id
+        GROUP BY u.id
       )
-    } else if (currentCount > 0) {
-      countTrend = 100 // If previous count was 0 but current count is positive
-    }
-
-    // Calculate evening usage percentage (videos created between 18:00-24:00)
-    const eveningUsageResult = await sql`
-      SELECT 
-        COUNT(*) FILTER (WHERE EXTRACT(HOUR FROM gh.created_at) BETWEEN 18 AND 23) as evening_count,
-        COUNT(*) as total_count
-      FROM gen_history gh
-      JOIN users u ON gh.user_id = u.id
-      WHERE u.google_id = ${userId}
-      AND gh.created_at >= CURRENT_DATE - INTERVAL '30 days';
+      SELECT PERCENT_RANK() OVER (ORDER BY metric_value) * 100 as percentile
+      FROM user_metrics
+      WHERE id = (SELECT id FROM users WHERE google_id = ${userId})
     `
-
-    let eveningUsagePercentage = 0
-    if (parseInt(eveningUsageResult[0]?.total_count || '0') > 0) {
-      eveningUsagePercentage = Math.round(
-        (parseInt(eveningUsageResult[0]?.evening_count || '0') /
-          parseInt(eveningUsageResult[0]?.total_count || '1')) *
-          100
-      )
-    }
-
-    // Get plan info from user's subscription
-    // This would typically come from a subscription table in a real app
-    const userPlanResult = await sql`
-      SELECT plan_type, plan_limit, expiry_date
-      FROM user_subscriptions
-      WHERE user_id = (SELECT id FROM users WHERE google_id = ${userId})
-      AND expiry_date > CURRENT_DATE
-      ORDER BY expiry_date DESC
-      LIMIT 1;
-    `
-
-    // Default values if no subscription found
-    let planLimit = '100 phút/tháng'
-    let planExpiry = '15/06/2025'
-
-    if (userPlanResult.length > 0) {
-      planLimit = `${userPlanResult[0].plan_limit} phút/tháng`
-      const expiryDate = new Date(userPlanResult[0].expiry_date)
-      planExpiry = `${expiryDate.getDate()}/${expiryDate.getMonth() + 1}/${expiryDate.getFullYear()}`
-    }
-
-    // Calculate usage as percentage of limit
-    const planLimitNumber = parseInt(planLimit.split(' ')[0])
-    const planUsage = Math.min(
-      Math.round((totalDuration / planLimitNumber) * 100),
-      100
+    const percentile = Math.round(
+      parseFloat(percentileResult[0]?.percentile || '0')
     )
 
     return {
-      totalVideos,
-      totalDuration,
-      lastGeneration,
-      promptsUsed,
-      peakDay,
-      peakTime,
-      planUsage,
-      planLimit,
-      planExpiry,
-      countTrend,
-      eveningUsagePercentage
+      metric,
+      userValue,
+      averageValue: avgValue,
+      percentile,
+      isAboveAverage: userValue > avgValue
     }
   } catch (error) {
-    console.error('Error fetching usage statistics:', error)
-    // Return fallback data in case of database error
+    console.error('Error getting metric comparison:', {
+      message: error.message,
+      stack: error.stack
+    })
+    throw new Error('Failed to get metric comparison')
+  }
+}
+
+export async function getUserRecommendations(userId: string) {
+  try {
+    const productiveTimeResult = await sql`
+      SELECT EXTRACT(HOUR FROM gh.created_at) as hour, AVG(g.duration) as avg_duration
+      FROM gallery g
+      JOIN gen_history gh ON g.id = gh.gallery_id
+      JOIN users u ON gh.user_id = u.id
+      WHERE u.google_id = ${userId}
+      GROUP BY hour
+      ORDER BY avg_duration DESC
+      LIMIT 1;
+    `
+
+    const successfulCategoryResult = await sql`
+      SELECT g.category, AVG(g.duration) as avg_duration
+      FROM gallery g
+      JOIN gen_history gh ON g.id = gh.gallery_id
+      JOIN users u ON gh.user_id = u.id
+      WHERE u.google_id = ${userId} AND g.category IS NOT NULL
+      GROUP BY g.category
+      ORDER BY avg_duration DESC
+      LIMIT 1;
+    `
+
+    const productiveHour = productiveTimeResult[0]?.hour
+      ? parseInt(productiveTimeResult[0].hour)
+      : null
+    const successfulCategory = successfulCategoryResult[0]?.category || null
+
     return {
-      totalVideos: 0,
-      totalDuration: 0,
-      lastGeneration: null,
-      promptsUsed: 0,
-      peakDay: 'Không có dữ liệu',
-      peakTime: 'Không có dữ liệu',
-      planUsage: 0,
-      planLimit: '100 phút/tháng',
-      planExpiry: '15/06/2025',
-      countTrend: 0,
-      eveningUsagePercentage: 0
+      productiveTimeRecommendation:
+        productiveHour !== null
+          ? `Thử tạo video vào khoảng ${productiveHour}:00 - ${(productiveHour + 1) % 24}:00 để có hiệu quả tốt nhất.`
+          : 'Thử tạo video vào buổi sáng (8:00 - 11:00) để có hiệu quả tốt nhất.',
+      categoryRecommendation: successfulCategory
+        ? `Bạn có vẻ tạo ra được những video dài và chất lượng nhất ở thể loại "${successfulCategory}".`
+        : 'Thử tập trung vào một thể loại cụ thể để cải thiện chất lượng video.',
+      generalRecommendation:
+        'Người dùng thường có hiệu suất cao hơn 15% khi sử dụng từ khóa chi tiết và cụ thể.'
+    }
+  } catch (error) {
+    console.error('Error generating recommendations:', {
+      message: error.message,
+      stack: error.stack
+    })
+    return {
+      productiveTimeRecommendation:
+        'Thử tạo video vào buổi sáng (8:00 - 11:00) để có hiệu quả tốt nhất.',
+      categoryRecommendation:
+        'Thử tập trung vào một thể loại cụ thể để cải thiện chất lượng video.',
+      generalRecommendation:
+        'Người dùng thường có hiệu suất cao hơn 15% khi sử dụng từ khóa chi tiết và cụ thể.'
     }
   }
 }

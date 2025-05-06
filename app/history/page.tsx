@@ -26,7 +26,7 @@ export default function HistoryPage() {
 
           <div className='flex flex-1 flex-col overflow-hidden'>
             <div className='px-4 py-4'>
-              <h1 className='text-3xl font-bold'>Lịch Sử Video</h1>
+              <h1 className='text-3xl font-bold'>Video History</h1>
             </div>
 
             <div className='flex-1 overflow-hidden px-4'>

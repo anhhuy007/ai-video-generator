@@ -32,7 +32,7 @@ export function DashboardSidebar() {
     <Sidebar>
       <SidebarHeader className='flex items-center px-4 py-2'>
         <div className='flex items-center gap-2'>
-          <Sparkles className='text-primary h-6 w-6' />
+          <Sparkles className='h-6 w-6 text-primary' />
           <span className='text-xl font-bold'>VideoAI</span>
         </div>
       </SidebarHeader>
@@ -60,9 +60,9 @@ export function DashboardSidebar() {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <Link href='/saved'>
+                  <Link href='/statistics'>
                     <Bookmark />
-                    <span>Saved</span>
+                    <span>Statistics</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
