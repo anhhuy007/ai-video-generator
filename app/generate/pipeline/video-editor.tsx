@@ -177,6 +177,23 @@ const MUSIC_STYLES = [
   }
 ]
 
+interface GalleryEntry {
+  id: string
+  [key: string]: any
+}
+
+interface UploadResponse {
+  url: string
+}
+
+interface GalleryResponse {
+  galleryEntry: GalleryEntry
+}
+
+interface GenHistoryResponse {
+  [key: string]: any
+}
+
 export default function VideoEditor({
   onComplete
 }: {
@@ -217,18 +234,59 @@ export default function VideoEditor({
       const formData = new FormData()
       formData.append('file', file)
 
-      const response = await axios.post('/api/upload', formData)
-      const uploadedVideoUrl = response.data.url
+      // Step 1: Upload video to Cloudinary
+      const uploadResponse = await axios.post<UploadResponse>(
+        '/api/upload',
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      )
+
+      const uploadedVideoUrl = uploadResponse.data.url
+      setVideoUrl(uploadedVideoUrl)
 
       if (!uploadedVideoUrl) {
         throw new Error('Failed to upload video to Cloudinary')
       }
 
-      setVideoUrl(uploadedVideoUrl)
+      // Step 2: Create a gallery entry
+      const videoDuration = await getAudioDuration(uploadedVideoUrl)
 
-      console.log('Uploaded video to Cloudinary:', uploadedVideoUrl)
-    } catch (error) {
-      console.error('Failed to download/upload video:', error)
+      const galleryResponse = await axios.post<GalleryResponse>(
+        '/api/gallery',
+        {
+          videoUrl: uploadedVideoUrl,
+          title: story.prompt,
+          category: null,
+          duration: videoDuration
+        }
+      )
+
+      const galleryEntry = galleryResponse.data.galleryEntry
+
+      // Step 3: Create a gen history entry
+      const genHistoryResponse = await axios.post<GenHistoryResponse>(
+        '/api/gen_history',
+        {
+          prompt: story.prompt,
+          galleryId: galleryEntry.id
+        }
+      )
+
+      const genHistoryData = genHistoryResponse.data
+    } catch (error: any) {
+      console.error(
+        'Upload or API error:',
+        error.response?.data || error.message
+      )
+      throw new Error(
+        error.response?.data?.error ||
+          error.message ||
+          'An unexpected error occurred'
+      )
     }
   }
 
@@ -238,12 +296,6 @@ export default function VideoEditor({
       onComplete()
     }
   }, [isConfigurationComplete, onComplete])
-
-  // useEffect(() => {
-  //   if (isConfigurationComplete) {
-  //     downloadAndUploadVideo()
-  //   }
-  // }, [isConfigurationComplete, previewVideoUrl, onComplete])
 
   const updateEffect = (key: keyof Effect, value: string) => {
     setEffect(prev => ({
