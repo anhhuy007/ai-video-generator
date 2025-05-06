@@ -161,6 +161,15 @@ export async function getGalleryEntries() {
   return result
 }
 
+export async function getTopGallery() {
+  const result = await sql`
+    SELECT * FROM gallery
+    ORDER BY created_at DESC
+    LIMIT 9;
+  `
+  return result
+}
+
 export async function getGalleryEntryById(galleryId: string) {
   const result = await sql`
     SELECT * FROM gallery

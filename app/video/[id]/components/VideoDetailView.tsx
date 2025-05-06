@@ -110,10 +110,10 @@ export default function VideoDetailView({
             {/* Additional buttons */}
             <div className='mt-4 border-t border-gray-200 pt-4'>
               <Link
-                href='/history'
+                href='/'
                 className='mr-2 inline-block rounded bg-gray-200 px-4 py-2 text-gray-700 hover:bg-gray-300'
               >
-                Quay lại Thư viện
+                Back to dashboard
               </Link>
             </div>
           </div>

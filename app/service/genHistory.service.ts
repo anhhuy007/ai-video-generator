@@ -51,6 +51,18 @@ export async function getGenHistoryForUser(googleId: string) {
   return result
 }
 
+export async function getGenHistoryForGalleryHome() {
+  const result = await sql`
+    SELECT gh.*
+    FROM gen_history gh
+    JOIN users u ON gh.user_id = u.id
+    ORDER BY gh.created_at DESC
+    LIMIT 9;
+  `
+  return result
+}
+
+
 export async function getGenHistoryById(historyId: string) {
   const result = await sql`
     SELECT * FROM gen_history
