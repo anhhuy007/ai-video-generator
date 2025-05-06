@@ -66,7 +66,7 @@ export default function LiteraryCreator({
   const [scriptEdited, setScriptEdited] = useState(false)
 
   // Track overall completion
-  const [isComplete, setIsComplete] = useState(false)
+  // const [isComplete, setIsComplete] = useState(false)
   const [error, setError] = useState('')
 
   // Scence count
@@ -75,12 +75,15 @@ export default function LiteraryCreator({
   const [isCustomSceneCount, setIsCustomSceneCount] = useState(false)
   const [sceneCountSelected, setSceneCountSelected] = useState(true)
 
+  // Personalize the script
+  const [personalizeStyle, setPersonalizeStyle] = useState(false)
+  const [personalizedStyleInput, setPersonalizedStyleInput] = useState('')
+
   const { setStory } = useGenerationStore()
 
   // Update completion status when script is approved
   useEffect(() => {
     if (isScriptApproved) {
-      setIsComplete(true)
       onComplete()
     }
   }, [isScriptApproved, onComplete])
@@ -121,6 +124,7 @@ export default function LiteraryCreator({
         body: JSON.stringify({
           topic,
           type: contentStyle,
+          // personalStyle: personalizedStyleInput,
           sceneCount
         })
       })
@@ -534,6 +538,42 @@ export default function LiteraryCreator({
                       </Label>
                     </div>
                   </RadioGroup>
+
+                  <div className='mt-4 border-t pt-4'>
+                    <div className='mb-2 flex items-center space-x-2'>
+                      <input
+                        type='checkbox'
+                        id='personalize-style'
+                        checked={personalizeStyle}
+                        onChange={() => setPersonalizeStyle(!personalizeStyle)}
+                        className='rounded border-gray-300'
+                      />
+                      <Label htmlFor='personalize-style'>
+                        Personalize writing style
+                      </Label>
+                    </div>
+
+                    {personalizeStyle && (
+                      <div className='mt-2'>
+                        <Label
+                          htmlFor='personalized-style-input'
+                          className='text-sm'
+                        >
+                          Write in the style of (e.g., "Ernest Hemingway", "a
+                          tech blog", "a fairy tale")
+                        </Label>
+                        <Input
+                          id='personalized-style-input'
+                          placeholder='Enter a writing style or author'
+                          value={personalizedStyleInput}
+                          onChange={e =>
+                            setPersonalizedStyleInput(e.target.value)
+                          }
+                          className='mt-1'
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className='mt-6'>
