@@ -177,23 +177,6 @@ const MUSIC_STYLES = [
   }
 ]
 
-interface GalleryEntry {
-  id: string
-  [key: string]: any
-}
-
-interface UploadResponse {
-  url: string
-}
-
-interface GalleryResponse {
-  galleryEntry: GalleryEntry
-}
-
-interface GenHistoryResponse {
-  [key: string]: any
-}
-
 export default function VideoEditor({
   onComplete
 }: {
@@ -235,17 +218,20 @@ export default function VideoEditor({
       formData.append('file', file)
 
       // Step 1: Upload video to Cloudinary
-      const uploadResponse = await axios.post<UploadResponse>(
-        '/api/upload',
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        }
-      )
+      const uploadResponse = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      })
 
-      const uploadedVideoUrl = uploadResponse.data.url
+      const uploadData = await uploadResponse.json()
+
+      if (!uploadResponse.ok) {
+        throw new Error(
+          uploadData.error || 'Failed to upload video to Cloudinary'
+        )
+      }
+
+      const uploadedVideoUrl = uploadData.url
       setVideoUrl(uploadedVideoUrl)
 
       if (!uploadedVideoUrl) {
@@ -254,39 +240,58 @@ export default function VideoEditor({
 
       // Step 2: Create a gallery entry
       const videoDuration = await getAudioDuration(uploadedVideoUrl)
+      const durationInt = Math.round(videoDuration)
 
-      const galleryResponse = await axios.post<GalleryResponse>(
-        '/api/gallery',
-        {
+      const galleryResponse = await fetch('/api/gallery', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
           videoUrl: uploadedVideoUrl,
           title: story.prompt,
           category: null,
-          duration: videoDuration
-        }
-      )
+          duration: durationInt
+        })
+      })
 
-      const galleryEntry = galleryResponse.data.galleryEntry
+      const galleryData = await galleryResponse.json()
+
+      if (!galleryResponse.ok || !galleryData.galleryEntry) {
+        throw new Error(
+          galleryData.error ||
+            `Failed to create gallery entry: ${galleryResponse.status} ${galleryResponse.statusText}`
+        )
+      }
+
+      console.log('Gallery entry created:', galleryData)
+      const galleryEntry = galleryData.galleryEntry
 
       // Step 3: Create a gen history entry
-      const genHistoryResponse = await axios.post<GenHistoryResponse>(
-        '/api/gen_history',
-        {
+      const genHistoryResponse = await fetch('/api/gen_history', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
           prompt: story.prompt,
-          galleryId: galleryEntry.id
-        }
-      )
+          galleryId: galleryData.galleryEntry.id
+        })
+      })
 
-      const genHistoryData = genHistoryResponse.data
+      const genHistoryData = await genHistoryResponse.json()
+
+      if (!genHistoryResponse.ok || !genHistoryData) {
+        throw new Error(
+          genHistoryData.error ||
+            `Failed to create gen history entry: ${genHistoryResponse.status} ${genHistoryResponse.statusText}`
+        )
+      }
+
+      console.log('Gen history entry created:', genHistoryData)
     } catch (error: any) {
-      console.error(
-        'Upload or API error:',
-        error.response?.data || error.message
-      )
-      throw new Error(
-        error.response?.data?.error ||
-          error.message ||
-          'An unexpected error occurred'
-      )
+      console.error('Upload or API error:', error.message)
+      throw new Error(error.message || 'An unexpected error occurred')
     }
   }
 
@@ -444,9 +449,15 @@ export default function VideoEditor({
 
   const handleComplete = async () => {
     setIsUploading(true)
-    await downloadAndUploadVideo()
-    setIsUploading(false)
-    setIsConfigurationComplete(true)
+
+    try {
+      await downloadAndUploadVideo()
+      setIsConfigurationComplete(true)
+    } catch (error) {
+      console.error('Error during video processing:', error)
+    } finally {
+      setIsUploading(false)
+    }
   }
 
   useEffect(() => {
