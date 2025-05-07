@@ -10,7 +10,17 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Loader2, FileText, Type, Check, Upload, Users } from 'lucide-react'
+import {
+  Loader2,
+  FileText,
+  Type,
+  Check,
+  Upload,
+  Users,
+  Bot,
+  CheckCheck,
+  Copy
+} from 'lucide-react'
 import type { Scene, Story } from '@/app/utils/type'
 import { useGenerationStore } from '@/store/useGenerationStore'
 import { Slider } from '@/components/ui/slider'
@@ -84,6 +94,23 @@ const AUDIENCE_STYLES = [
   }
 ]
 
+const AI_MODELS = [
+  {
+    id: 'gemini',
+    name: 'GEMINI',
+    description:
+      "Google's advanced AI model with strong creative writing capabilities",
+    logo: 'https://www.pngall.com/wp-content/uploads/16/Google-Gemini-Logo-Transparent.png'
+  },
+  {
+    id: 'meta',
+    name: 'META',
+    description:
+      "Meta's powerful AI model optimized for diverse content generation",
+    logo: 'https://tse2.mm.bing.net/th/id/OIP.mj65YatMOlC-OtA9LwH8zQHaHc?rs=1&pid=ImgDetMain'
+  }
+]
+
 const SCENE_COUNT_OPTIONS = [3, 5, 7, 10]
 
 export default function LiteraryCreator({
@@ -109,7 +136,6 @@ export default function LiteraryCreator({
 
   // Step completion states
   const [topicSelected, setTopicSelected] = useState(false)
-  const [styleSelected, setStyleSelected] = useState(false)
   const [scriptGenerated, setScriptGenerated] = useState(false)
   const [scriptEdited, setScriptEdited] = useState(false)
 
@@ -131,6 +157,12 @@ export default function LiteraryCreator({
   const [useAudienceStyle, setUseAudienceStyle] = useState(false)
   const [selectedAudience, setSelectedAudience] = useState<string | null>(null)
 
+  // AI model
+  const [selectedAIModel, setSelectedAIModel] = useState<string | null>(null)
+
+  // Copy state
+  const [isCopied, setIsCopied] = useState(false)
+
   const { setStory } = useGenerationStore()
 
   // Update completion status when script is approved
@@ -139,6 +171,10 @@ export default function LiteraryCreator({
       onComplete()
     }
   }, [isScriptApproved, onComplete])
+
+  const handleAIModelSelect = (modelId: string) => {
+    setSelectedAIModel(modelId)
+  }
 
   const handleAudienceSelect = (audienceId: string) => {
     setSelectedAudience(audienceId)
@@ -151,8 +187,16 @@ export default function LiteraryCreator({
       setContentStyle(selectedAudienceStyle.contentStyle)
       setPersonalizedStyleInput(selectedAudienceStyle.personalizedStyle)
       setPersonalizeStyle(true)
-      setStyleSelected(true)
     }
+  }
+
+  const handleCopyScript = () => {
+    navigator.clipboard.writeText(generatedScript)
+    setIsCopied(true)
+
+    setTimeout(() => {
+      setIsCopied(false)
+    }, 2000)
   }
 
   const handleToggleAudienceStyle = () => {
@@ -164,7 +208,6 @@ export default function LiteraryCreator({
       setContentStyle('analysis')
       setPersonalizeStyle(false)
       setPersonalizedStyleInput('')
-      setStyleSelected(false)
     }
   }
 
@@ -175,7 +218,6 @@ export default function LiteraryCreator({
 
   const handleContentStyleChange = (style: string) => {
     setContentStyle(style)
-    setStyleSelected(true)
   }
 
   function extractScript(story: Story): string {
@@ -204,8 +246,9 @@ export default function LiteraryCreator({
         body: JSON.stringify({
           topic,
           type: contentStyle,
-          // personalStyle: personalizedStyleInput,
-          sceneCount
+          personalStyle: personalizedStyleInput,
+          sceneCount,
+          AI_type: selectedAIModel
         })
       })
         .then(response => {
@@ -501,14 +544,7 @@ export default function LiteraryCreator({
     }
   }
 
-  // Check if topic tab is complete
-  const isTopicTabComplete = () => {
-    if (inputMethod === 'type') {
-      return topicSelected && styleSelected
-    } else {
-      return fileProcessed
-    }
-  }
+  const selectedModel = AI_MODELS.find(model => model.name === selectedAIModel)
 
   return (
     <div>
@@ -774,18 +810,78 @@ export default function LiteraryCreator({
                   )}
                 </div>
 
+                <div className='mt-6 border-t pt-4'>
+                  <Label className='mb-2 block'>Select AI Model</Label>
+                  <p className='mb-3 text-sm text-muted-foreground'>
+                    Choose which AI model will generate your script
+                  </p>
+
+                  <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
+                    {AI_MODELS.map(model => (
+                      <Card
+                        key={model.name}
+                        className={`cursor-pointer transition-colors hover:border-primary ${
+                          selectedAIModel === model.name
+                            ? 'border-primary bg-primary/10'
+                            : ''
+                        }`}
+                        onClick={() => handleAIModelSelect(model.name)}
+                      >
+                        <CardContent className='p-4'>
+                          <div className='flex items-center space-x-3'>
+                            <div className='flex-shrink-0'>
+                              <img
+                                src={model.logo || '/placeholder.svg'}
+                                alt={model.name}
+                                className='h-10 w-10 rounded-full'
+                              />
+                            </div>
+                            <div className='flex-grow'>
+                              <h3 className='font-medium'>{model.name}</h3>
+                              <p className='text-xs text-muted-foreground'>
+                                {model.description}
+                              </p>
+                            </div>
+                            {selectedAIModel === model.name && (
+                              <Check className='h-5 w-5 flex-shrink-0 text-primary' />
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+
                 <Button
                   onClick={handleGenerateScript}
-                  disabled={!topicSelected || isGenerating}
+                  disabled={
+                    !topicSelected ||
+                    (useAudienceStyle ? !selectedAudience : false) ||
+                    !sceneCountSelected ||
+                    isGenerating ||
+                    (!useAudienceStyle &&
+                      personalizeStyle &&
+                      personalizedStyleInput.trim() === '') ||
+                    !selectedAIModel
+                  }
                   className='w-full'
                 >
                   {isGenerating ? (
                     <>
                       <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                      Generating Script...
+                      Generating Script with{' '}
+                      {selectedAIModel === 'GEMINI' ? 'GEMINI' : 'META'}...
                     </>
                   ) : (
-                    'Generate Script'
+                    <>
+                      <Bot className='mr-2 h-4 w-4' />
+                      Generate Script with{' '}
+                      {selectedAIModel
+                        ? selectedAIModel === 'GEMINI'
+                          ? 'GEMINI'
+                          : 'META'
+                        : 'AI'}
+                    </>
                   )}
                 </Button>
               </>
@@ -880,13 +976,120 @@ export default function LiteraryCreator({
 
         <TabsContent value='preview'>
           <div className='space-y-6'>
-            <div>
-              <Label>Script Preview</Label>
-              <div className='mt-2 min-h-[200px] whitespace-pre-line rounded-md border bg-muted/50 p-4'>
-                {generatedScript ||
-                  'No script generated yet. Please go back and generate a script.'}
-              </div>
-            </div>
+            {/* Selected Settings Summary */}
+            <Card className='border-muted-foreground/20'>
+              <CardContent className='p-6'>
+                <h3 className='mb-4 flex items-center text-lg font-medium'>
+                  <span className='mr-2 rounded-full bg-primary/10 p-1 text-primary'>
+                    <Check className='h-4 w-4' />
+                  </span>
+                  Selected Settings
+                </h3>
+                <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
+                  <div>
+                    <h4 className='text-sm font-medium text-muted-foreground'>
+                      Topic
+                    </h4>
+                    <p className='font-medium'>{topic}</p>
+                  </div>
+                  <div>
+                    <h4 className='text-sm font-medium text-muted-foreground'>
+                      AI Model
+                    </h4>
+                    <p className='flex items-center font-medium'>
+                      {selectedModel && (
+                        <>
+                          <img
+                            src={selectedModel.logo}
+                            alt={selectedModel.name}
+                            className='mr-1 h-5 w-5 rounded-full'
+                          />
+                          {selectedModel.name}
+                        </>
+                      )}
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className='text-sm font-medium text-muted-foreground'>
+                      {useAudienceStyle ? 'Target Audience' : 'Content Style'}
+                    </h4>
+                    <p className='font-medium'>
+                      {useAudienceStyle
+                        ? AUDIENCE_STYLES.find(a => a.id === selectedAudience)
+                            ?.name || 'Not selected'
+                        : contentStyle === 'analysis'
+                          ? 'Analysis'
+                          : contentStyle === 'storytelling'
+                            ? 'Storytelling'
+                            : 'Poetry Illustration'}
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className='text-sm font-medium text-muted-foreground'>
+                      Number of Scenes
+                    </h4>
+                    <p className='font-medium'>{sceneCount}</p>
+                  </div>
+                  {personalizeStyle && personalizedStyleInput && (
+                    <div className='col-span-2'>
+                      <h4 className='text-sm font-medium text-muted-foreground'>
+                        Personalized Style
+                      </h4>
+                      <p className='font-medium'>{personalizedStyleInput}</p>
+                    </div>
+                  )}
+                  {inputMethod === 'upload' && uploadedFile && (
+                    <div className='col-span-2'>
+                      <h4 className='text-sm font-medium text-muted-foreground'>
+                        Uploaded Document
+                      </h4>
+                      <p className='flex items-center font-medium'>
+                        <FileText className='mr-1 h-4 w-4 text-muted-foreground' />
+                        {uploadedFile.name} (
+                        {(uploadedFile.size / 1024).toFixed(1)} KB)
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Script Preview */}
+            <Card>
+              <CardContent className='p-6'>
+                <div className='mb-4 flex items-center justify-between'>
+                  <h3 className='flex items-center text-lg font-medium'>
+                    <Bot className='mr-2 h-5 w-5 text-primary' />
+                    Generated Script
+                  </h3>
+                  <div className='flex items-center space-x-2'>
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      onClick={handleCopyScript}
+                      className='transition-all'
+                      disabled={isCopied}
+                    >
+                      {isCopied ? (
+                        <>
+                          <CheckCheck className='mr-1 h-4 w-4 text-green-500' />
+                          <span className='text-green-500'>Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className='mr-1 h-4 w-4' />
+                          Copy Script
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+                <div className='max-h-[500px] min-h-[300px] overflow-y-auto whitespace-pre-line rounded-md border bg-muted/50 p-4'>
+                  {generatedScript ||
+                    'No script generated yet. Please go back and generate a script.'}
+                </div>
+              </CardContent>
+            </Card>
 
             <div className='flex space-x-4'>
               <Button variant='outline' onClick={() => setActiveTab('topic')}>
