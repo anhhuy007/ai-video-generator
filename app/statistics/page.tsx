@@ -32,13 +32,13 @@ export default function StatisticsPage() {
     return (
       <div className='flex h-screen items-center justify-center'>
         <div className='rounded-lg border bg-white p-6 shadow-md'>
-          <h1 className='mb-4 text-2xl font-bold'>Không có quyền truy cập</h1>
-          <p className='mb-4'>Vui lòng đăng nhập để xem thống kê của bạn.</p>
+          <h1 className='mb-4 text-2xl font-bold'>Access Denied</h1>
+          <p className='mb-4'>Please log in to view your statistics.</p>
           <button
             onClick={() => (window.location.href = '/api/auth/signin')}
             className='rounded bg-primary px-4 py-2 text-white hover:bg-primary/90'
           >
-            Đăng nhập
+            Log In
           </button>
         </div>
       </div>
@@ -53,17 +53,17 @@ export default function StatisticsPage() {
           <DashboardHeader session={session} onSignOut={() => signOut()} />
           <div className='flex flex-1 flex-col overflow-auto'>
             <div className='px-6 py-6'>
-              <h1 className='text-3xl font-bold'>Thống Kê & Phân Tích</h1>
+              <h1 className='text-3xl font-bold'>Statistics & Analytics</h1>
               <p className='mt-2 text-muted-foreground'>
-                Theo dõi hoạt động và hiệu suất tạo video của bạn
+                Track your video generation activity and performance
               </p>
             </div>
             <div className='flex-1 px-6 pb-6'>
               <Tabs defaultValue='generation' className='w-full'>
                 <TabsList className='mb-6 grid w-full max-w-md grid-cols-3'>
-                  <TabsTrigger value='generation'>Tạo Video</TabsTrigger>
-                  <TabsTrigger value='usage'>Sử Dụng</TabsTrigger>
-                  <TabsTrigger value='prompts'>Từ Khóa</TabsTrigger>
+                  <TabsTrigger value='generation'>Video Generation</TabsTrigger>
+                  <TabsTrigger value='usage'>Usage</TabsTrigger>
+                  <TabsTrigger value='prompts'>Keywords</TabsTrigger>
                 </TabsList>
                 <TabsContent value='generation' className='space-y-6'>
                   <GenerationStats userId={session?.user?.id} />

@@ -42,10 +42,10 @@ import {
 
 interface UsageStats {
   totalVideos: number
-  totalDuration: number // Đơn vị: giây
+  totalDuration: number // Unit: seconds
   lastGeneration: string | null
-  longestVideo: { title: string; duration: number } | null // Đơn vị: giây
-  avgDuration: number // Đơn vị: giây
+  longestVideo: { title: string; duration: number } | null // Unit: seconds
+  avgDuration: number // Unit: seconds
   promptsUsed: number
   peakDay: string
   peakTime: string
@@ -69,25 +69,25 @@ interface UsageStats {
 }
 
 const formatTimeAgo = (dateString: string | null): string => {
-  if (!dateString) return 'Không có dữ liệu'
+  if (!dateString) return 'No data'
   const date = new Date(dateString)
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
   const diffMins = Math.floor(diffMs / 60000)
-  if (diffMins < 60) return `${diffMins} phút trước`
+  if (diffMins < 60) return `${diffMins} minutes ago`
   const diffHours = Math.floor(diffMins / 60)
-  if (diffHours < 24) return `${diffHours} giờ trước`
+  if (diffHours < 24) return `${diffHours} hours ago`
   const diffDays = Math.floor(diffHours / 24)
-  if (diffDays < 30) return `${diffDays} ngày trước`
+  if (diffDays < 30) return `${diffDays} days ago`
   const diffMonths = Math.floor(diffDays / 30)
-  if (diffMonths < 12) return `${diffMonths} tháng trước`
-  return `${Math.floor(diffMonths / 12)} năm trước`
+  if (diffMonths < 12) return `${diffMonths} months ago`
+  return `${Math.floor(diffMonths / 12)} years ago`
 }
 
 const formatDate = (dateString: string | null): string => {
-  if (!dateString) return 'Không có dữ liệu'
+  if (!dateString) return 'No data'
   const date = new Date(dateString)
-  return new Intl.DateTimeFormat('vi-VN', {
+  return new Intl.DateTimeFormat('en-US', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -96,14 +96,14 @@ const formatDate = (dateString: string | null): string => {
   }).format(date)
 }
 
-// Cập nhật formatDuration để nhận đầu vào là giây
+// Update formatDuration to accept seconds as input
 const formatDuration = (seconds: number): string => {
-  if (isNaN(seconds) || seconds < 0) return '0 giây'
-  if (seconds < 60) return `${Math.round(seconds)} giây`
+  if (isNaN(seconds) || seconds < 0) return '0 seconds'
+  if (seconds < 60) return `${Math.round(seconds)} seconds`
   const minutes = seconds / 60
   const hrs = Math.floor(minutes / 60)
   const mins = Math.round(minutes % 60)
-  return hrs > 0 ? `${hrs} giờ ${mins} phút` : `${mins} phút`
+  return hrs > 0 ? `${hrs} hrs ${mins} mins` : `${mins} mins`
 }
 
 const OverviewTab = ({ usageStats }: { usageStats: UsageStats }) => (
@@ -111,7 +111,7 @@ const OverviewTab = ({ usageStats }: { usageStats: UsageStats }) => (
     <div className='grid grid-cols-1 gap-6 md:grid-cols-3'>
       <Card>
         <CardHeader className='pb-2'>
-          <CardDescription>Tổng Số Video</CardDescription>
+          <CardDescription>Total Videos</CardDescription>
           <CardTitle className='text-3xl'>
             <div className='flex items-center gap-2'>
               <Video className='h-6 w-6 text-primary' />
@@ -121,13 +121,13 @@ const OverviewTab = ({ usageStats }: { usageStats: UsageStats }) => (
         </CardHeader>
         <CardContent>
           <p className='text-sm text-muted-foreground'>
-            Tạo gần đây: {formatTimeAgo(usageStats.lastGeneration)}
+            Recent creation: {formatTimeAgo(usageStats.lastGeneration)}
           </p>
         </CardContent>
       </Card>
       <Card>
         <CardHeader className='pb-2'>
-          <CardDescription>Tổng Thời Lượng</CardDescription>
+          <CardDescription>Total Duration</CardDescription>
           <CardTitle className='text-3xl'>
             <div className='flex items-center gap-2'>
               <Clock className='h-6 w-6 text-primary' />
@@ -137,13 +137,13 @@ const OverviewTab = ({ usageStats }: { usageStats: UsageStats }) => (
         </CardHeader>
         <CardContent>
           <p className='text-sm text-muted-foreground'>
-            Trung bình: {formatDuration(usageStats.avgDuration)}
+            Average: {formatDuration(usageStats.avgDuration)}
           </p>
         </CardContent>
       </Card>
       <Card>
         <CardHeader className='pb-2'>
-          <CardDescription>Số Lượng Từ Khóa</CardDescription>
+          <CardDescription>Number of Keywords</CardDescription>
           <CardTitle className='text-3xl'>
             <div className='flex items-center gap-2'>
               <Zap className='h-6 w-6 text-primary' />
@@ -156,7 +156,7 @@ const OverviewTab = ({ usageStats }: { usageStats: UsageStats }) => (
             {usageStats.totalVideos > 0
               ? (usageStats.promptsUsed / usageStats.totalVideos).toFixed(1)
               : '0'}{' '}
-            từ khóa/video
+            keywords/video
           </p>
         </CardContent>
       </Card>
@@ -164,8 +164,8 @@ const OverviewTab = ({ usageStats }: { usageStats: UsageStats }) => (
     <div className='grid grid-cols-1 gap-6 md:grid-cols-2'>
       <Card>
         <CardHeader>
-          <CardTitle>Thói Quen Sử Dụng</CardTitle>
-          <CardDescription>Phân tích thời gian và ngày sử dụng</CardDescription>
+          <CardTitle>Usage Habits</CardTitle>
+          <CardDescription>Analysis of time and day of usage</CardDescription>
         </CardHeader>
         <CardContent className='space-y-4'>
           <div className='grid grid-cols-2 gap-4'>
@@ -173,7 +173,7 @@ const OverviewTab = ({ usageStats }: { usageStats: UsageStats }) => (
               <div className='flex flex-col space-y-2'>
                 <div className='flex items-center space-x-2'>
                   <Calendar className='h-4 w-4 text-muted-foreground' />
-                  <span className='text-sm font-medium'>Ngày Cao Điểm</span>
+                  <span className='text-sm font-medium'>Peak Day</span>
                 </div>
                 <span className='text-xl font-bold'>{usageStats.peakDay}</span>
               </div>
@@ -182,7 +182,7 @@ const OverviewTab = ({ usageStats }: { usageStats: UsageStats }) => (
               <div className='flex flex-col space-y-2'>
                 <div className='flex items-center space-x-2'>
                   <Clock className='h-4 w-4 text-muted-foreground' />
-                  <span className='text-sm font-medium'>Giờ Cao Điểm</span>
+                  <span className='text-sm font-medium'>Peak Hours</span>
                 </div>
                 <span className='text-xl font-bold'>{usageStats.peakTime}</span>
               </div>
@@ -190,8 +190,8 @@ const OverviewTab = ({ usageStats }: { usageStats: UsageStats }) => (
           </div>
           <div className='space-y-1'>
             <div className='flex items-center justify-between text-sm'>
-              <span>Phân phối thời gian sử dụng</span>
-              <span>Chủ yếu buổi tối</span>
+              <span>Usage time distribution</span>
+              <span>Mostly evenings</span>
             </div>
             <div className='h-2 w-full rounded-full bg-secondary'>
               <div
@@ -200,23 +200,23 @@ const OverviewTab = ({ usageStats }: { usageStats: UsageStats }) => (
               ></div>
             </div>
             <p className='text-xs text-muted-foreground'>
-              {usageStats.eveningUsagePercentage}% hoạt động diễn ra từ 18:00 -
-              24:00
+              {usageStats.eveningUsagePercentage}% activity occurs from 6:00 PM
+              - 12:00 AM
             </p>
           </div>
         </CardContent>
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle>Tiến Độ Sử Dụng Gói</CardTitle>
+          <CardTitle>Plan Usage Progress</CardTitle>
           <CardDescription>
-            Sử dụng gói {usageStats.planType} của bạn trong tháng này
+            Your {usageStats.planType} plan usage this month
           </CardDescription>
         </CardHeader>
         <CardContent className='space-y-4'>
           <div className='flex flex-col space-y-1'>
             <div className='flex items-center justify-between text-sm'>
-              <span>Thời lượng đã sử dụng</span>
+              <span>Duration used</span>
               <span className='font-medium'>
                 {formatDuration(
                   (usageStats.planUsage / 100) *
@@ -233,30 +233,30 @@ const OverviewTab = ({ usageStats }: { usageStats: UsageStats }) => (
               ></div>
             </div>
             <p className='text-xs text-muted-foreground'>
-              {usageStats.planUsage}% đã sử dụng trong tháng này
+              {usageStats.planUsage}% used this month
             </p>
           </div>
           <div className='rounded-lg border p-4'>
             <div className='flex flex-col space-y-4'>
               <div className='flex items-center justify-between'>
-                <span className='text-sm font-medium'>Gói hiện tại</span>
+                <span className='text-sm font-medium'>Current plan</span>
                 <span className='font-semibold text-primary'>
                   {usageStats.planType}
                 </span>
               </div>
               <div className='flex items-center justify-between'>
-                <span className='text-sm font-medium'>Ngày gia hạn</span>
+                <span className='text-sm font-medium'>Renewal date</span>
                 <span>{usageStats.planExpiry}</span>
               </div>
               <div className='flex items-center justify-between'>
-                <span className='text-sm font-medium'>Chu kỳ thanh toán</span>
-                <span>Hàng tháng</span>
+                <span className='text-sm font-medium'>Billing cycle</span>
+                <span>Monthly</span>
               </div>
             </div>
           </div>
         </CardContent>
         <CardFooter>
-          <Button className='w-full'>Nâng Cấp Gói</Button>
+          <Button className='w-full'>Upgrade Plan</Button>
         </CardFooter>
       </Card>
     </div>
@@ -265,31 +265,31 @@ const OverviewTab = ({ usageStats }: { usageStats: UsageStats }) => (
 
 const TrendsTab = ({ usageStats }: { usageStats: UsageStats }) => {
   const timeDistributionData = [
-    { name: 'Sáng', value: usageStats.timeDistribution.morning },
-    { name: 'Chiều', value: usageStats.timeDistribution.afternoon },
-    { name: 'Tối', value: usageStats.timeDistribution.evening },
-    { name: 'Đêm', value: usageStats.timeDistribution.night }
+    { name: 'Morning', value: usageStats.timeDistribution.morning },
+    { name: 'Afternoon', value: usageStats.timeDistribution.afternoon },
+    { name: 'Evening', value: usageStats.timeDistribution.evening },
+    { name: 'Night', value: usageStats.timeDistribution.night }
   ]
   const weeklyDistributionData = usageStats.weeklyDistribution.map(
     (value, index) => ({
-      name: ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'][index],
+      name: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][index],
       videos: value
     })
   )
   const monthlyTrendsData = usageStats.monthlyTrends.map(item => ({
     name: [
-      'T1',
-      'T2',
-      'T3',
-      'T4',
-      'T5',
-      'T6',
-      'T7',
-      'T8',
-      'T9',
-      'T10',
-      'T11',
-      'T12'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
     ][item.month - 1],
     videos: item.count
   }))
@@ -299,9 +299,9 @@ const TrendsTab = ({ usageStats }: { usageStats: UsageStats }) => {
     <TabsContent value='trends' className='space-y-6'>
       <Card>
         <CardHeader>
-          <CardTitle>Xu Hướng Sử Dụng</CardTitle>
+          <CardTitle>Usage Trends</CardTitle>
           <CardDescription>
-            Phân tích xu hướng sử dụng trong 30 ngày qua
+            Analysis of usage trends in the past 30 days
           </CardDescription>
         </CardHeader>
         <CardContent className='space-y-6'>
@@ -317,13 +317,13 @@ const TrendsTab = ({ usageStats }: { usageStats: UsageStats }) => {
                 )}
               </div>
               <div>
-                <p className='text-sm text-muted-foreground'>Số lượng video</p>
+                <p className='text-sm text-muted-foreground'>Video count</p>
                 <p className='text-lg font-bold'>
                   {usageStats.countTrend >= 0 ? '+' : ''}
                   {usageStats.countTrend}%
                 </p>
                 <p className='text-sm text-muted-foreground'>
-                  so với 30 ngày trước
+                  compared to previous 30 days
                 </p>
               </div>
             </div>
@@ -333,20 +333,20 @@ const TrendsTab = ({ usageStats }: { usageStats: UsageStats }) => {
               </div>
               <div>
                 <p className='text-sm text-muted-foreground'>
-                  Thời lượng trung bình
+                  Average duration
                 </p>
                 <p className='text-lg font-bold'>
                   {formatDuration(usageStats.avgDuration)}
                 </p>
                 <p className='text-sm text-muted-foreground'>
-                  Tổng cộng {formatDuration(usageStats.totalDuration)}
+                  Total {formatDuration(usageStats.totalDuration)}
                 </p>
               </div>
             </div>
           </div>
           <div>
             <h4 className='mb-3 text-sm font-medium'>
-              Phân phối theo thời gian trong ngày
+              Distribution by time of day
             </h4>
             <div className='h-64'>
               <ResponsiveContainer width='100%' height='100%'>
@@ -370,16 +370,14 @@ const TrendsTab = ({ usageStats }: { usageStats: UsageStats }) => {
                       />
                     ))}
                   </Pie>
-                  <Tooltip
-                    formatter={value => [`${value} video`, 'Số lượng']}
-                  />
+                  <Tooltip formatter={value => [`${value} videos`, 'Count']} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
           </div>
           <div>
             <h4 className='mb-3 text-sm font-medium'>
-              Phân phối theo ngày trong tuần
+              Distribution by day of week
             </h4>
             <div className='h-64'>
               <ResponsiveContainer width='100%' height='100%'>
@@ -387,29 +385,27 @@ const TrendsTab = ({ usageStats }: { usageStats: UsageStats }) => {
                   <CartesianGrid strokeDasharray='3 3' />
                   <XAxis dataKey='name' />
                   <YAxis />
-                  <Tooltip
-                    formatter={value => [`${value} video`, 'Số lượng']}
-                  />
+                  <Tooltip formatter={value => [`${value} videos`, 'Count']} />
                   <Bar dataKey='videos' fill='#8884d8' />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
           <div className='rounded-lg border p-4'>
-            <h4 className='mb-2 text-sm font-medium'>Lời khuyên tối ưu</h4>
+            <h4 className='mb-2 text-sm font-medium'>Optimization advice</h4>
             <p className='text-sm text-muted-foreground'>
-              Dựa trên mẫu sử dụng của bạn, thử tạo video vào buổi sáng (8:00 -
-              11:00) để có kết quả tốt hơn. Người dùng có xu hướng nhận được
-              hiệu suất cao hơn 15% khi tạo video vào khung giờ này.
+              Based on your usage patterns, try creating videos in the morning
+              (8:00 AM - 11:00 AM) for better results. Users tend to get 15%
+              higher performance when creating videos during this time window.
             </p>
           </div>
         </CardContent>
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle>Xu Hướng Theo Tháng</CardTitle>
+          <CardTitle>Monthly Trends</CardTitle>
           <CardDescription>
-            Số lượng video được tạo mỗi tháng trong năm nay
+            Number of videos created each month this year
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -419,7 +415,7 @@ const TrendsTab = ({ usageStats }: { usageStats: UsageStats }) => {
                 <CartesianGrid strokeDasharray='3 3' />
                 <XAxis dataKey='name' />
                 <YAxis />
-                <Tooltip formatter={value => [`${value} video`, 'Số lượng']} />
+                <Tooltip formatter={value => [`${value} videos`, 'Count']} />
                 <Bar dataKey='videos' fill='#4f46e5' />
               </BarChart>
             </ResponsiveContainer>
@@ -444,9 +440,9 @@ const DetailsTab = ({ usageStats }: { usageStats: UsageStats }) => {
       <div className='grid grid-cols-1 gap-6 md:grid-cols-2'>
         <Card>
           <CardHeader>
-            <CardTitle>Chi Tiết Video</CardTitle>
+            <CardTitle>Video Details</CardTitle>
             <CardDescription>
-              Thông tin chi tiết về video của bạn
+              Detailed information about your videos
             </CardDescription>
           </CardHeader>
           <CardContent className='space-y-4'>
@@ -456,9 +452,7 @@ const DetailsTab = ({ usageStats }: { usageStats: UsageStats }) => {
                   <div className='flex flex-col space-y-2'>
                     <div className='flex items-center space-x-2'>
                       <Timer className='h-4 w-4 text-muted-foreground' />
-                      <span className='text-sm font-medium'>
-                        Video dài nhất
-                      </span>
+                      <span className='text-sm font-medium'>Longest video</span>
                     </div>
                     <span className='font-semibold'>
                       {usageStats.longestVideo.title}
@@ -474,7 +468,7 @@ const DetailsTab = ({ usageStats }: { usageStats: UsageStats }) => {
                   <div className='flex items-center space-x-2'>
                     <BarChart3 className='h-4 w-4 text-muted-foreground' />
                     <span className='text-sm font-medium'>
-                      Thể loại phổ biến nhất
+                      Most popular category
                     </span>
                   </div>
                   <span className='text-lg font-semibold'>
@@ -487,7 +481,7 @@ const DetailsTab = ({ usageStats }: { usageStats: UsageStats }) => {
                   <div className='flex items-center space-x-2'>
                     <Award className='h-4 w-4 text-muted-foreground' />
                     <span className='text-sm font-medium'>
-                      Ngày sáng tạo nhất
+                      Most productive day
                     </span>
                   </div>
                   <span className='text-lg font-semibold'>
@@ -500,9 +494,9 @@ const DetailsTab = ({ usageStats }: { usageStats: UsageStats }) => {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Chi Tiết Tài Khoản</CardTitle>
+            <CardTitle>Account Details</CardTitle>
             <CardDescription>
-              Thông tin về tài khoản và hoạt động của bạn
+              Information about your account and activity
             </CardDescription>
           </CardHeader>
           <CardContent className='space-y-4'>
@@ -511,15 +505,13 @@ const DetailsTab = ({ usageStats }: { usageStats: UsageStats }) => {
                 <div className='flex flex-col space-y-2'>
                   <div className='flex items-center space-x-2'>
                     <User className='h-4 w-4 text-muted-foreground' />
-                    <span className='text-sm font-medium'>
-                      Thời gian sử dụng
-                    </span>
+                    <span className='text-sm font-medium'>Account age</span>
                   </div>
                   <span className='text-lg font-semibold'>
-                    {accountAge} ngày
+                    {accountAge} days
                   </span>
                   <span className='text-sm text-muted-foreground'>
-                    Tài khoản được tạo: {formatDate(usageStats.firstGeneration)}
+                    Account created: {formatDate(usageStats.firstGeneration)}
                   </span>
                 </div>
               </div>
@@ -527,31 +519,29 @@ const DetailsTab = ({ usageStats }: { usageStats: UsageStats }) => {
                 <div className='flex flex-col space-y-2'>
                   <div className='flex items-center space-x-2'>
                     <History className='h-4 w-4 text-muted-foreground' />
-                    <span className='text-sm font-medium'>
-                      Hoạt động gần đây
-                    </span>
+                    <span className='text-sm font-medium'>Recent activity</span>
                   </div>
                   <span className='text-lg font-semibold'>
                     {formatTimeAgo(usageStats.lastGeneration)}
                   </span>
                   <span className='text-sm text-muted-foreground'>
-                    Lần tạo video cuối: {formatDate(usageStats.lastGeneration)}
+                    Last video creation: {formatDate(usageStats.lastGeneration)}
                   </span>
                 </div>
               </div>
             </div>
             <div className='rounded-lg border p-4'>
-              <h4 className='mb-2 text-sm font-medium'>Thống kê sử dụng</h4>
+              <h4 className='mb-2 text-sm font-medium'>Usage statistics</h4>
               <div className='space-y-2'>
                 <div className='flex justify-between'>
                   <span className='text-sm text-muted-foreground'>
-                    Tổng số video:
+                    Total videos:
                   </span>
                   <span className='font-medium'>{usageStats.totalVideos}</span>
                 </div>
                 <div className='flex justify-between'>
                   <span className='text-sm text-muted-foreground'>
-                    Tổng thời lượng:
+                    Total duration:
                   </span>
                   <span className='font-medium'>
                     {formatDuration(usageStats.totalDuration)}
@@ -559,7 +549,7 @@ const DetailsTab = ({ usageStats }: { usageStats: UsageStats }) => {
                 </div>
                 <div className='flex justify-between'>
                   <span className='text-sm text-muted-foreground'>
-                    Trung bình mỗi video:
+                    Average per video:
                   </span>
                   <span className='font-medium'>
                     {formatDuration(usageStats.avgDuration)}
@@ -567,7 +557,7 @@ const DetailsTab = ({ usageStats }: { usageStats: UsageStats }) => {
                 </div>
                 <div className='flex justify-between'>
                   <span className='text-sm text-muted-foreground'>
-                    Tổng từ khóa đã dùng:
+                    Total keywords used:
                   </span>
                   <span className='font-medium'>{usageStats.promptsUsed}</span>
                 </div>
@@ -637,7 +627,7 @@ export function UsageTabs() {
       <div className='rounded border border-red-400 bg-red-100 px-4 py-3 text-red-700'>
         {error}
         <Button onClick={fetchUsageStats} className='ml-4'>
-          Thử lại
+          Try again
         </Button>
       </div>
     )
@@ -649,9 +639,9 @@ export function UsageTabs() {
     <div className='space-y-6'>
       <Tabs value={activeTab} onValueChange={setActiveTab} className='w-full'>
         <TabsList className='mb-6 grid grid-cols-3'>
-          <TabsTrigger value='overview'>Tổng Quan</TabsTrigger>
-          <TabsTrigger value='trends'>Phân Tích Xu Hướng</TabsTrigger>
-          <TabsTrigger value='details'>Chi Tiết Sử Dụng</TabsTrigger>
+          <TabsTrigger value='overview'>Overview</TabsTrigger>
+          <TabsTrigger value='trends'>Trend Analysis</TabsTrigger>
+          <TabsTrigger value='details'>Usage Details</TabsTrigger>
         </TabsList>
         <OverviewTab usageStats={usageStats} />
         <TrendsTab usageStats={usageStats} />

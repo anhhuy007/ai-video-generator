@@ -112,7 +112,7 @@ export function PopularPrompts({ userId }: PopularPromptsProps) {
 
   const copyPrompt = (promptText: string) => {
     navigator.clipboard.writeText(promptText)
-    toast.success('Từ khóa đã được sao chép vào clipboard', {
+    toast.success('Prompt copied to clipboard', {
       position: 'top-right',
       autoClose: 2000,
       hideProgressBar: false,
@@ -123,7 +123,7 @@ export function PopularPrompts({ userId }: PopularPromptsProps) {
   }
 
   if (isLoading) {
-    return <div className='py-6 text-center'>Đang tải dữ liệu...</div>
+    return <div className='py-6 text-center'>Loading data...</div>
   }
 
   if (error) {
@@ -139,14 +139,12 @@ export function PopularPrompts({ userId }: PopularPromptsProps) {
       <div className='flex flex-col gap-6 md:flex-row'>
         <Card className='flex-1'>
           <CardHeader>
-            <CardTitle>Từ Khóa Phổ Biến</CardTitle>
-            <CardDescription>
-              Các từ khóa được sử dụng nhiều nhất của bạn
-            </CardDescription>
+            <CardTitle>Popular Prompts</CardTitle>
+            <CardDescription>Your most frequently used prompts</CardDescription>
             <div className='relative mt-2'>
               <Search className='absolute left-2 top-2.5 h-4 w-4 text-muted-foreground' />
               <Input
-                placeholder='Tìm kiếm từ khóa...'
+                placeholder='Search prompts...'
                 className='pl-8'
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
@@ -157,13 +155,13 @@ export function PopularPrompts({ userId }: PopularPromptsProps) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Từ khóa</TableHead>
+                  <TableHead>Prompt</TableHead>
                   <TableHead
                     className='w-[100px] cursor-pointer'
                     onClick={() => handleSort('count')}
                   >
                     <div className='flex items-center'>
-                      Số lần
+                      Count
                       {sortField === 'count' &&
                         (sortDirection === 'asc' ? (
                           <ChevronUp className='ml-1 h-4 w-4' />
@@ -172,15 +170,15 @@ export function PopularPrompts({ userId }: PopularPromptsProps) {
                         ))}
                     </div>
                   </TableHead>
-                  <TableHead className='w-[150px]'>Thẻ</TableHead>
-                  <TableHead className='w-[100px]'>Hành động</TableHead>
+                  <TableHead className='w-[150px]'>Tags</TableHead>
+                  <TableHead className='w-[100px]'>Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredPrompts.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4} className='text-center'>
-                      Không tìm thấy từ khóa nào
+                      No prompts found
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -218,8 +216,8 @@ export function PopularPrompts({ userId }: PopularPromptsProps) {
 
         <Card className='w-full md:w-[400px]'>
           <CardHeader>
-            <CardTitle>Phân Loại Từ Khóa</CardTitle>
-            <CardDescription>Số lượng từ khóa theo danh mục</CardDescription>
+            <CardTitle>Prompt Categories</CardTitle>
+            <CardDescription>Number of prompts by category</CardDescription>
           </CardHeader>
           <CardContent className='h-[300px]'>
             <ResponsiveContainer width='100%' height='100%'>
@@ -231,7 +229,7 @@ export function PopularPrompts({ userId }: PopularPromptsProps) {
                 <XAxis dataKey='name' />
                 <YAxis />
                 <Tooltip />
-                <Bar dataKey='count' fill='#8884d8' name='Số từ khóa' />
+                <Bar dataKey='count' fill='#8884d8' name='Number of prompts' />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
