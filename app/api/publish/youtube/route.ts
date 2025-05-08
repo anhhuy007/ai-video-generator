@@ -1,97 +1,59 @@
+// pages/api/youtube/upload.ts
 import { NextApiRequest, NextApiResponse } from 'next'
-import { youtubeService } from '@/app/service/youtube.service'
-import { IncomingForm } from 'formidable'
-import fs from 'fs'
-import path from 'path'
+import {
+  uploadVideoFromUrl,
+  isAdminAuthenticated
+} from '@/app/service/youtube.service'
 
-export const config = {
-  api: {
-    bodyParser: false
-  }
-}
-
+/**
+ * API endpoint để upload video lên YouTube thông qua tài khoản admin
+ */
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method Not Allowed' })
+    return res.status(405).json({ error: 'Method not allowed' })
   }
 
   try {
-    const accessToken = req.cookies.youtube_access_token
-    const refreshToken = req.cookies.youtube_refresh_token
-
-    if (!accessToken) {
-      return res.status(401).json({ message: 'Not authenticated with YouTube' })
-    }
-
-    youtubeService.setToken({
-      access_token: accessToken,
-      refresh_token: refreshToken
-    })
-
-    const form = new IncomingForm({
-      keepExtensions: true,
-      maxFileSize: 500 * 1024 * 1024 // 500MB
-    })
-
-    const result: any = await new Promise((resolve, reject) => {
-      form.parse(req, (err, fields, files) => {
-        if (err) return reject(err)
-        resolve({ fields, files })
+    // Kiểm tra xem admin đã xác thực chưa
+    if (!isAdminAuthenticated()) {
+      return res.status(401).json({
+        error:
+          'Admin chưa xác thực với YouTube API. Vui lòng xác thực trước khi upload video.'
       })
-    })
-
-    const { fields, files } = result
-
-    const title = Array.isArray(fields.title) ? fields.title[0] : fields.title
-    const description = Array.isArray(fields.description)
-      ? fields.description[0]
-      : fields.description
-    const tagsString = Array.isArray(fields.tags) ? fields.tags[0] : fields.tags
-    const tags = tagsString.split(',').map((tag: string) => tag.trim())
-    const privacyStatus = Array.isArray(fields.privacyStatus)
-      ? fields.privacyStatus[0]
-      : fields.privacyStatus || 'private'
-
-    const videoFile = Array.isArray(files.video) ? files.video[0] : files.video
-
-    if (!videoFile) {
-      return res.status(400).json({ message: 'No video file uploaded' })
     }
 
-    const filePath = videoFile.filepath
-    const fileBuffer = fs.readFileSync(filePath)
-    const fileBlob = new Blob([fileBuffer])
-    const file = new File(
-      [fileBlob],
-      videoFile.originalFilename || 'video.mp4',
-      {
-        type: videoFile.mimetype || 'video/mp4'
-      }
-    )
+    // Lấy thông tin video từ request body
+    const { videoUrl, title, description, tags } = req.body
 
-    const videoId = await youtubeService.uploadVideo(file, {
-      title,
-      description,
-      tags,
-      privacyStatus: privacyStatus as 'public' | 'unlisted' | 'private'
+    if (!videoUrl) {
+      return res.status(400).json({ error: 'Thiếu URL video' })
+    }
+
+    // Chuẩn bị tags dưới dạng array
+    const tagArray = tags
+      ? tags.split(',').map((tag: string) => tag.trim())
+      : []
+
+    // Upload video lên YouTube
+    const result = await uploadVideoFromUrl(videoUrl, {
+      title: title || 'Video không có tiêu đề',
+      description: description || '',
+      tags: tagArray
     })
 
-    fs.unlinkSync(filePath)
-
-    res.status(200).json({
-      success: true,
-      videoId,
-      youtubeUrl: `https://www.youtube.com/watch?v=${videoId}`
-    })
+    if (result.success) {
+      res.status(200).json(result)
+    } else {
+      res.status(500).json({ error: result.error })
+    }
   } catch (error) {
-    console.error('Error uploading video:', error)
-    const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error'
-    res
-      .status(500)
-      .json({ message: 'Error uploading video', error: errorMessage })
+    console.error('Lỗi khi upload video:', error)
+    res.status(500).json({
+      error:
+        error instanceof Error ? error.message : 'Lỗi server khi upload video'
+    })
   }
 }

@@ -13,7 +13,15 @@ import {
 } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
-import { Download, Share2, Bookmark, MoreHorizontal, Play, Clock, MessageSquare } from 'lucide-react'
+import {
+  Download,
+  Share2,
+  Bookmark,
+  MoreHorizontal,
+  Play,
+  Clock,
+  MessageSquare
+} from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -124,9 +132,7 @@ export function VideoGallery() {
       <Card>
         <CardHeader>
           <CardTitle>Your Videos</CardTitle>
-          <CardDescription>
-            Browse and manage your generated videos
-          </CardDescription>
+          <CardDescription>Manage your generated videos</CardDescription>
         </CardHeader>
         <CardContent>
           <div className='py-6 text-center'>Loading data...</div>
@@ -140,9 +146,7 @@ export function VideoGallery() {
       <Card>
         <CardHeader>
           <CardTitle>Your Videos</CardTitle>
-          <CardDescription>
-            Browse and manage your generated videos
-          </CardDescription>
+          <CardDescription>Manage your generated videos</CardDescription>
         </CardHeader>
         <CardContent>
           <div className='rounded border border-red-400 bg-red-100 px-4 py-3 text-red-700'>
@@ -162,8 +166,6 @@ export function VideoGallery() {
         </CardDescription>
       </CardHeader>
       <CardContent className='space-y-6'>
-
-
         {displayedHistories.length === 0 ? (
           <div className='flex h-40 flex-col items-center justify-center rounded-lg border border-dashed'>
             <p className='text-muted-foreground'>No videos found</p>
@@ -184,7 +186,7 @@ export function VideoGallery() {
                 <Link
                   href={`/video/${galleryEntry.id}`}
                   key={history.id}
-                  className='group relative overflow-hidden rounded-lg border bg-card block'
+                  className='group relative block overflow-hidden rounded-lg border bg-card'
                 >
                   <div className='relative aspect-video overflow-hidden'>
                     <video
@@ -224,7 +226,11 @@ export function VideoGallery() {
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant='ghost' size='icon' className='h-8 w-8'>
+                          <Button
+                            variant='ghost'
+                            size='icon'
+                            className='h-8 w-8'
+                          >
                             <MoreHorizontal className='h-4 w-4' />
                           </Button>
                         </DropdownMenuTrigger>

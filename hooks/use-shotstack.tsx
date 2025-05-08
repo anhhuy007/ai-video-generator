@@ -11,7 +11,9 @@ import {
 export default function useShotstackRender(
   mediaItems: MediaItem[],
   effect: Effect,
-  isProduction: Boolean
+  isProduction: Boolean,
+  isAutoSubtitle: Boolean,
+  isBackgroundMusic: Boolean
 ) {
   const [isRendering, setIsRendering] = useState(false)
   const [renderData, setRenderData] = useState<any>(null)
@@ -150,92 +152,79 @@ export default function useShotstackRender(
       }))
     }
 
-    const musicTrack = {
-      clips: [
-        {
-          asset: {
-            type: 'audio',
-            src: effect.musicStyle.mp3Url,
-            volume: 0.3 * (effect.musicStyle.volume / 100)
-          } as any,
-          start: 0,
-          length: totalDuration
-        }
-      ]
-    }
-    let captionTrack = null
-
-    const selectedSubtitlePosition = effect.subtitlePosition || 'bottomLeft'
-    const selectedStyle = effect.subtitleStyle || 'future'
-
-    // Tìm config tương ứng từ danh sách
-    const selectedPosition =
-      SUBTITLE_POSITIONS.find(pos => pos.value === selectedSubtitlePosition) ||
-      SUBTITLE_POSITIONS[0]
-
-    const subtitleStyle =
-      SUBTITLE_STYLES.find(style => style.value === selectedStyle) ||
-      SUBTITLE_STYLES[0]
-
-    const isBottom = selectedPosition.position === 'bottom'
-
-    try {
-      const captionSrc = await uploadSRTFileWithAxios(items)
-      console.log('Caption SRT URL:', captionSrc)
-
-      // Cấu hình caption track
-      captionTrack = {
+    let musicTrack = null
+    if (isBackgroundMusic) {
+      musicTrack = {
         clips: [
           {
             asset: {
-              type: 'caption',
-              src: captionSrc,
-              width: isBottom ? 1000 : 500,
-              font: {
-                ...subtitleStyle.font,
-                size: isBottom ? '40' : subtitleStyle.font.size,
-                lineHeight: isBottom ? 1 : subtitleStyle.font.lineHeight
-              },
-              alignment: selectedPosition.alignment
-            },
-            position: selectedPosition.position,
-            offset: selectedPosition.offset,
+              type: 'audio',
+              src: effect.musicStyle.mp3Url,
+              volume: 0.3 * (effect.musicStyle.volume / 100)
+            } as any,
             start: 0,
             length: totalDuration
           }
         ]
       }
+    }
+    let captionTrack = null
 
-      // captionTrack = {
-      //   clips: [
-      //     {
-      //       asset: {
-      //         type: 'caption',
-      //         src: captionSrc,
-      //         width: 500,
-      //         font: subtitleStyle?.font || {
-      //           family: 'Open Sans Regular',
-      //           size: '42',
-      //           lineHeight: 1.4
-      //         },
-      //         alignment: subtitleConfig?.alignment || { horizontal: 'left' }
-      //       },
-      //       position: subtitleConfig?.position || 'bottom',
-      //       offset: subtitleConfig?.offset || { x: 0, y: 0 },
-      //       start: 0,
-      //       length: totalDuration
-      //     }
-      //   ]
-      // }
-    } catch (err) {
-      console.warn('Failed to upload subtitle:', err)
+    if (isAutoSubtitle) {
+      const selectedSubtitlePosition = effect.subtitlePosition || 'bottomLeft'
+      const selectedStyle = effect.subtitleStyle || 'future'
+
+      const selectedPosition =
+        SUBTITLE_POSITIONS.find(
+          pos => pos.value === selectedSubtitlePosition
+        ) || SUBTITLE_POSITIONS[0]
+
+      const subtitleStyle =
+        SUBTITLE_STYLES.find(style => style.value === selectedStyle) ||
+        SUBTITLE_STYLES[0]
+
+      const isBottom = selectedPosition.position === 'bottom'
+
+      try {
+        const captionSrc = await uploadSRTFileWithAxios(items)
+        console.log('Caption SRT URL:', captionSrc)
+
+        captionTrack = {
+          clips: [
+            {
+              asset: {
+                type: 'caption',
+                src: captionSrc,
+                width: isBottom ? 1000 : 500,
+                font: {
+                  ...subtitleStyle.font,
+                  size: isBottom ? '40' : subtitleStyle.font.size,
+                  lineHeight: isBottom ? 1 : subtitleStyle.font.lineHeight
+                },
+                alignment: selectedPosition.alignment
+              },
+              position: selectedPosition.position,
+              offset: selectedPosition.offset,
+              start: 0,
+              length: totalDuration
+            }
+          ]
+        }
+      } catch (error) {
+        console.error('Error uploading SRT file:', error)
+        throw new Error('Failed to upload SRT file')
+      }
     }
 
     let tracks = []
-    if (captionTrack) {
-      tracks = [captionTrack, imageTrack, audioTrack, musicTrack]
+    if (captionTrack && isAutoSubtitle) {
+      tracks = [captionTrack, imageTrack, audioTrack]
     } else {
-      tracks = [imageTrack, audioTrack, musicTrack]
+      tracks = [imageTrack, audioTrack]
+    }
+
+    if (musicTrack && isBackgroundMusic) {
+      tracks.push(musicTrack)
     }
 
     let currentTime = 0

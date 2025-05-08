@@ -1,80 +1,135 @@
+// services/youtubeService.ts
 import { google } from 'googleapis'
+import fs from 'fs'
+import path from 'path'
 
-// Cấu hình thông tin OAuth 2.0
-const OAuth2 = google.auth.OAuth2
-const SCOPES = ['https://www.googleapis.com/auth/youtube.upload']
-
-const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
-const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET
-const REDIRECT_URL =
-  process.env.NEXT_PUBLIC_GOOGLE_REDIRECT_URI ||
-  'http://localhost:3000/api/auth/callback/google'
-
-export interface VideoMetadata {
-  title: string
-  description: string
-  tags: string[]
-  privacyStatus: 'public' | 'unlisted' | 'private'
+export interface YouTubeTokens {
+  access_token: string
+  refresh_token?: string
+  scope: string
+  token_type: string
+  expiry_date: number
 }
 
-export class YouTubeService {
-  private oauth2Client: any
+class YouTubeService {
+  private youtube: any = null
+  public oAuth2Client: any = null
 
-  constructor() {
-    this.oauth2Client = new OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URL)
-  }
+  /**
+   * Initialize the YouTube API client with OAuth credentials
+   */
+  initialize(
+    clientId: string,
+    clientSecret: string,
+    redirectUri: string
+  ): void {
+    if (!clientId || !clientSecret || !redirectUri) {
+      throw new Error('Missing required OAuth credentials')
+    }
 
-  getAuthUrl(): string {
-    return this.oauth2Client.generateAuthUrl({
-      access_type: 'offline',
-      scope: SCOPES,
-      include_granted_scopes: true
+    this.oAuth2Client = new google.auth.OAuth2(
+      clientId,
+      clientSecret,
+      redirectUri
+    )
+
+    this.youtube = google.youtube({
+      version: 'v3',
+      auth: this.oAuth2Client
     })
   }
 
-  async getToken(code: string): Promise<any> {
-    const { tokens } = await this.oauth2Client.getToken(code)
-    this.oauth2Client.setCredentials(tokens)
-    return tokens
+  /**
+   * Get the authorization URL for YouTube
+   */
+  getAuthUrl(): string {
+    if (!this.oAuth2Client) {
+      throw new Error('YouTube service not initialized')
+    }
+
+    return this.oAuth2Client.generateAuthUrl({
+      access_type: 'offline',
+      scope: ['https://www.googleapis.com/auth/youtube.upload']
+    })
   }
 
-  setToken(tokens: any): void {
-    this.oauth2Client.setCredentials(tokens)
-  }
+  /**
+   * Exchange authorization code for tokens
+   */
+  async getTokenFromCode(code: string): Promise<YouTubeTokens> {
+    if (!this.oAuth2Client) {
+      throw new Error('YouTube service not initialized')
+    }
 
-  async uploadVideo(videoFile: File, metadata: VideoMetadata): Promise<string> {
     try {
-      const youtube = google.youtube({
-        version: 'v3',
-        auth: this.oauth2Client
-      })
+      const { tokens } = await this.oAuth2Client.getToken(code)
+      this.oAuth2Client.setCredentials(tokens)
+      return tokens
+    } catch (error: any) {
+      throw new Error(`Failed to get tokens from code: ${error.message}`)
+    }
+  }
 
-      const arrayBuffer = await videoFile.arrayBuffer()
-      const buffer = Buffer.from(arrayBuffer)
+  /**
+   * Set credentials from existing tokens
+   */
+  setCredentials(tokens: YouTubeTokens): void {
+    if (!this.oAuth2Client) {
+      throw new Error('YouTube service not initialized')
+    }
+    this.oAuth2Client.setCredentials(tokens)
+  }
 
-      const response = await youtube.videos.insert({
-        part: ['snippet', 'status'],
+  /**
+   * Upload video to YouTube
+   */
+  async uploadVideo(
+    filePath: string,
+    title: string,
+    description: string,
+    tags: string[] = [],
+    privacyStatus: string = 'unlisted'
+  ): Promise<{ id: string; url: string }> {
+    if (!this.youtube) {
+      throw new Error('YouTube service not initialized')
+    }
+
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`Video file not found at: ${filePath}`)
+    }
+
+    try {
+      // Upload video to YouTube
+      const res = await this.youtube.videos.insert({
+        part: 'snippet,status',
         requestBody: {
           snippet: {
-            title: metadata.title,
-            description: metadata.description,
-            tags: metadata.tags
+            title,
+            description,
+            tags,
+            categoryId: '22' // People & Blogs category
           },
           status: {
-            privacyStatus: metadata.privacyStatus
+            privacyStatus
           }
         },
         media: {
-          body: buffer
+          body: fs.createReadStream(filePath)
         }
       })
 
-      return response.data.id || ''
-    } catch (error) {
-      console.error('Lỗi khi tải video lên YouTube:', error)
-      throw error
+      // Return video ID and URL
+      return {
+        id: res.data.id,
+        url: `https://www.youtube.com/watch?v=${res.data.id}`
+      }
+    } catch (error: any) {
+      throw new Error(`Failed to upload video: ${error.message}`)
     }
   }
 }
 
-export const youtubeService = new YouTubeService()
+// Export singleton instance
+const youtubeService = new YouTubeService()
+export default youtubeService

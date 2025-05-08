@@ -98,12 +98,6 @@ export default function ImageVideoGenerator({
     number | null
   >(null)
 
-  // Image editing states
-  const [imageScale, setImageScale] = useState([100])
-  const [brightness, setBrightness] = useState([100])
-  const [contrast, setContrast] = useState([100])
-  const [saturation, setSaturation] = useState([100])
-
   const [dialogOpen, setDialogOpen] = useState(false)
   const [dialogScreen, setDialogScreen] = useState<number | null>(null)
 
@@ -240,11 +234,16 @@ export default function ImageVideoGenerator({
 
     try {
       const screen = scriptScreens.find(s => s.id === screenId)
+      const characters = story.characters
+      console.log('Characters:', characters)
+      if (!characters) return
       if (!screen) return
 
       const prompt = generateImagePrompt(screen, imageStyle)
       const response = await axios.post('/api/generation/image', {
-        prompt
+        prompt,
+        characters: characters,
+        imageType: imageStyle
       })
 
       if (response.data.image) {
@@ -291,11 +290,14 @@ export default function ImageVideoGenerator({
 
     try {
       const screen = updatedScreens.find(s => s.id === currentEditingScreen)
+      const charaters = story.characters
       if (!screen) return
 
       const prompt = generateImagePrompt(screen, imageStyle)
       const response = await axios.post('/api/generation/image', {
-        prompt
+        prompt,
+        characters: charaters,
+        imageType: imageStyle
       })
 
       if (response.data.image) {
@@ -552,6 +554,7 @@ export default function ImageVideoGenerator({
             </div>
           </div>
         </TabsContent>
+
         <TabsContent value='edit'>
           {currentEditingScreen !== null &&
             screenImages[currentEditingScreen] && (
@@ -573,19 +576,13 @@ export default function ImageVideoGenerator({
                   </Button>
                 </div>
 
-                <div className='overflow-hidden rounded-md border'>
+                <div className='flex justify-center overflow-hidden rounded-md'>
                   <img
                     src={
-                      screenImages[currentEditingScreen] || '/placeholder.jpg'
+                      screenImages[currentEditingScreen] || '/placeholder.svg'
                     }
                     alt={`Editing ${scriptScreens.find(s => s.id === currentEditingScreen)?.title}`}
-                    className='h-auto w-full'
-                    width={500} // Adjust width as needed
-                    height={500} // Adjust height as needed
-                    style={{
-                      transform: `scale(${imageScale[0] / 100})`,
-                      filter: `brightness(${brightness[0]}%) contrast(${contrast[0]}%) saturate(${saturation[0]}%)`
-                    }}
+                    className='max-h-[200px] max-w-full object-contain'
                   />
                 </div>
 
@@ -624,98 +621,8 @@ export default function ImageVideoGenerator({
                   </Button>
                 </div>
 
-                <div className='mt-4 border-t pt-4'>
-                  <h4 className='mb-2 font-medium'>Image Adjustments</h4>
-                </div>
-
-                <div className='space-y-4'>
-                  <div>
-                    <div className='mb-2 flex justify-between'>
-                      <Label>Image Scale</Label>
-                      <span className='text-sm text-muted-foreground'>
-                        {imageScale[0]}%
-                      </span>
-                    </div>
-                    <Slider
-                      value={imageScale}
-                      onValueChange={setImageScale}
-                      min={50}
-                      max={150}
-                      step={5}
-                    />
-                    <div className='mt-1 flex justify-between text-xs text-muted-foreground'>
-                      <span>
-                        <Minimize className='inline h-3 w-3' /> Smaller
-                      </span>
-                      <span>
-                        Larger <Maximize className='inline h-3 w-3' />
-                      </span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className='mb-2 flex justify-between'>
-                      <Label>Brightness</Label>
-                      <span className='text-sm text-muted-foreground'>
-                        {brightness[0]}%
-                      </span>
-                    </div>
-                    <Slider
-                      value={brightness}
-                      onValueChange={setBrightness}
-                      min={50}
-                      max={150}
-                      step={5}
-                    />
-                  </div>
-
-                  <div>
-                    <div className='mb-2 flex justify-between'>
-                      <Label>Contrast</Label>
-                      <span className='text-sm text-muted-foreground'>
-                        {contrast[0]}%
-                      </span>
-                    </div>
-                    <Slider
-                      value={contrast}
-                      onValueChange={setContrast}
-                      min={50}
-                      max={150}
-                      step={5}
-                    />
-                  </div>
-
-                  <div>
-                    <div className='mb-2 flex justify-between'>
-                      <Label>Saturation</Label>
-                      <span className='text-sm text-muted-foreground'>
-                        {saturation[0]}%
-                      </span>
-                    </div>
-                    <Slider
-                      value={saturation}
-                      onValueChange={setSaturation}
-                      min={0}
-                      max={200}
-                      step={5}
-                    />
-                  </div>
-
-                  <div className='flex justify-between pt-4'>
-                    <Button
-                      variant='outline'
-                      onClick={() => {
-                        // Reset all adjustments
-                        setImageScale([100])
-                        setBrightness([100])
-                        setContrast([100])
-                        setSaturation([100])
-                      }}
-                    >
-                      Reset Adjustments
-                    </Button>
-                    <Button onClick={handleSaveEdit}>Save Changes</Button>
-                  </div>
+                <div className='mt-4 flex justify-end'>
+                  <Button onClick={handleSaveEdit}>Save Changes</Button>
                 </div>
               </div>
             )}

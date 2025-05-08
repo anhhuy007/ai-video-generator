@@ -16,6 +16,7 @@ import { ScriptProvider } from '@/app/context/ScriptContext'
 import { SidebarProvider } from '@/components/ui/sidebar'
 import { DashboardSidebar } from '../dashboard/components/sidebar'
 import { DashboardHeader } from '../dashboard/components/header'
+import { signOut, useSession } from 'next-auth/react'
 
 export default function GeneratePage() {
   return (
@@ -26,6 +27,7 @@ export default function GeneratePage() {
 }
 
 function GenerateSteps() {
+  const session = useSession()
   const [activeStep, setActiveStep] = useState('literary')
   const [completedSteps, setCompletedSteps] = useState<string[]>([])
 
@@ -82,7 +84,13 @@ function GenerateSteps() {
       <div className='flex h-screen w-full overflow-hidden bg-background'>
         <DashboardSidebar />
         <div className='flex flex-1 flex-col overflow-hidden'>
-          {/* <DashboardHeader /> */}
+          {/* <DashboardHeader
+            session={session.data}
+            onSignOut={() => {
+              console.log('Sign out clicked')
+              signOut()
+            }}
+          /> */}
           <div className='flex-1 overflow-auto p-4 md:p-6'>
             <h1 className='mb-8 text-3xl font-bold'>Create AI Video</h1>
 

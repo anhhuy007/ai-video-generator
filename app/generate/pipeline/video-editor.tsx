@@ -185,7 +185,6 @@ export default function VideoEditor({
   const [activeTab, setActiveTab] = useState('timeline')
   const [autoSubtitles, setAutoSubtitles] = useState(true)
   const [backgroundMusic, setBackgroundMusic] = useState(true)
-  // const [isEditorComplete, setIsEditorComplete] = useState(false)
   const [isPreviewReady, setIsPreviewReady] = useState(false)
   const { story, images, mp3_url, setVideoUrl } = useGenerationStore()
   const [media_items, setMediaItems] = useState<MediaItem[]>([])
@@ -193,7 +192,6 @@ export default function VideoEditor({
   const [previewVideoError, setPreviewVideoError] = useState<string>('')
   const [isConfigurationComplete, setIsConfigurationComplete] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
-
   const [effect, setEffect] = useState<Effect>({
     subtitleStyle: 'future',
     subtitlePosition: 'bottom',
@@ -205,7 +203,6 @@ export default function VideoEditor({
     }
   })
 
-  const [selectedEffects, setSelectedEffects] = useState<string[]>([])
   const downloadAndUploadVideo = async () => {
     try {
       if (!previewVideoUrl) return
@@ -365,7 +362,9 @@ export default function VideoEditor({
   const { startRender, isRendering, renderData } = useShotstackRender(
     media_items,
     effect,
-    false
+    false,
+    autoSubtitles,
+    backgroundMusic
   )
 
   useEffect(() => {
@@ -378,12 +377,6 @@ export default function VideoEditor({
     }
     setPreviewVideoUrl(renderData.url)
   }, [renderData])
-
-  const toggleEffect = (effect: string) => {
-    setSelectedEffects(prev =>
-      prev.includes(effect) ? prev.filter(e => e !== effect) : [...prev, effect]
-    )
-  }
 
   function splitCaption(
     text: string,
@@ -905,7 +898,7 @@ export default function VideoEditor({
                 </Card>
               </div>
             </div>
-
+            {/* 
             <div>
               <Label className='mb-2 block'>Animations & Effects</Label>
               <div className='grid grid-cols-2 gap-2 md:grid-cols-4'>
@@ -932,7 +925,7 @@ export default function VideoEditor({
                   </div>
                 ))}
               </div>
-            </div>
+            </div> */}
 
             <div className='flex justify-between'>
               <Button

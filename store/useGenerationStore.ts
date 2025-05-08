@@ -32,6 +32,7 @@ export const useGenerationStore = create<GenerationStore>(set => ({
   mp3_url: [],
   setMp3Url: mp3_url => set({ mp3_url }),
 
-  video_url: '',
+  video_url:
+    'https://res.cloudinary.com/dprxfw51q/video/upload/v1746498980/video_gen_ai/pghegtvhh54ya01ecbdo.mp4',
   setVideoUrl: video_url => set({ video_url })
 }))
