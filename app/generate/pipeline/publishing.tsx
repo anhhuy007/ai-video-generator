@@ -6,11 +6,33 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Check, Loader2, Youtube, Globe, Lock, Eye } from 'lucide-react'
+import {
+  Check,
+  Loader2,
+  Youtube,
+  Globe,
+  Lock,
+  Eye,
+  Database,
+  Save
+} from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { useGenerationStore } from '@/store/useGenerationStore'
 import { YouTubeTokens } from '@/app/service/youtube.service'
+
+const getAudioDuration = (url: string): Promise<number> => {
+  return new Promise((resolve, reject) => {
+    const audio = new Audio()
+    audio.src = url
+    audio.addEventListener('loadedmetadata', () => {
+      resolve(audio.duration)
+    })
+    audio.addEventListener('error', err => {
+      reject(err)
+    })
+  })
+}
 
 export default function Publishing({ onComplete }: { onComplete: () => void }) {
   const [title, setTitle] = useState(
@@ -31,7 +53,10 @@ export default function Publishing({ onComplete }: { onComplete: () => void }) {
   const [error, setError] = useState<string | null>(null)
   const [youtubeUrl, setYoutubeUrl] = useState<string | null>(null)
 
-  const { video_url } = useGenerationStore()
+  const [isSaved, setIsSaved] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+
+  const { video_url, story } = useGenerationStore()
 
   // Check if we have YouTube tokens on mount
   useEffect(() => {
@@ -49,10 +74,100 @@ export default function Publishing({ onComplete }: { onComplete: () => void }) {
 
   // Update completion status when publishing is complete
   useEffect(() => {
-    if (isPublished) {
+    if (isPublished && isSaved) {
       onComplete()
     }
-  }, [isPublished, onComplete])
+  }, [isPublished, isSaved, onComplete])
+
+  const handleSaveAll = async () => {
+    try {
+      setIsSaving(true)
+
+      // Step 1: create a gallery entry
+      const videoDuration = await getAudioDuration(video_url)
+      const durationInt = Math.round(videoDuration)
+
+      const galleryResponse = await fetch('/api/gallery', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          videoUrl: video_url,
+          title: title,
+          category: null,
+          duration: durationInt
+        })
+      })
+
+      const galleryData = await galleryResponse.json()
+
+      if (!galleryResponse.ok || !galleryData.galleryEntry) {
+        throw new Error(
+          galleryData.error ||
+            `Failed to create gallery entry: ${galleryResponse.status} ${galleryResponse.statusText}`
+        )
+      }
+
+      console.log('Gallery entry created:', galleryData)
+      const galleryEntry = galleryData.galleryEntry
+
+      // Step 2: Create a gen history entry
+      const genHistoryResponse = await fetch('/api/gen_history', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          prompt: story.prompt,
+          galleryId: galleryData.galleryEntry.id
+        })
+      })
+
+      const genHistoryData = await genHistoryResponse.json()
+
+      if (!genHistoryResponse.ok || !genHistoryData) {
+        throw new Error(
+          genHistoryData.error ||
+            `Failed to create gen history entry: ${genHistoryResponse.status} ${genHistoryResponse.statusText}`
+        )
+      }
+
+      console.log('Gen history entry created:', genHistoryData)
+
+      // Step 3: Create youtube entry
+      const youtubeResponse = await fetch('/api/youtube', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          genHistoryId: genHistoryData.id,
+          youtubeUrl: youtubeUrl,
+          title: title,
+          description: description,
+          tags: tags
+        })
+      })
+
+      const youtubeData = await youtubeResponse.json()
+      if (!youtubeResponse.ok || !youtubeData) {
+        throw new Error(
+          youtubeData.error ||
+            `Failed to create YouTube entry: ${youtubeResponse.status} ${youtubeResponse.statusText}`
+        )
+      }
+
+      console.log('YouTube entry created:', youtubeData)
+
+      setIsSaved(true)
+    } catch (error: any) {
+      console.error('Upload or API error:', error.message)
+      throw new Error(error.message || 'An unexpected error occurred')
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   const handleAuthYouTube = async () => {
     setIsAuthenticating(true)
@@ -297,45 +412,66 @@ export default function Publishing({ onComplete }: { onComplete: () => void }) {
             )}
 
             {/* Authentication and Publish Buttons */}
-            {!isAuthenticated ? (
+            {!isPublished ? (
+              !isAuthenticated ? (
+                <Button
+                  onClick={handleAuthYouTube}
+                  className='w-full'
+                  size='lg'
+                  disabled={isAuthenticating}
+                >
+                  {isAuthenticating ? (
+                    <>
+                      <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                      Connecting...
+                    </>
+                  ) : (
+                    <>
+                      <Youtube className='mr-2 h-5 w-5 text-red-600' />
+                      Connect to YouTube
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <Button
+                  onClick={handlePublish}
+                  disabled={isPublishing}
+                  className='w-full'
+                  size='lg'
+                >
+                  {isPublishing ? (
+                    <>
+                      <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                      Publishing...
+                    </>
+                  ) : (
+                    'Publish Video'
+                  )}
+                </Button>
+              )
+            ) : !isSaved ? (
               <Button
-                onClick={handleAuthYouTube}
+                onClick={handleSaveAll}
+                disabled={isSaving}
                 className='w-full'
                 size='lg'
-                disabled={isAuthenticating}
               >
-                {isAuthenticating ? (
+                {isSaving ? (
                   <>
                     <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                    Connecting...
+                    Saving to Database...
                   </>
                 ) : (
                   <>
-                    <Youtube className='mr-2 h-5 w-5 text-red-600' />
-                    Connect to YouTube
+                    <Save className='mr-2 h-4 w-4' />
+                    Save All to Database
                   </>
                 )}
               </Button>
             ) : (
-              <Button
-                onClick={handlePublish}
-                disabled={isPublishing || isPublished}
-                className='w-full'
-                size='lg'
-              >
-                {isPublishing ? (
-                  <>
-                    <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                    Publishing...
-                  </>
-                ) : isPublished ? (
-                  <>
-                    <Check className='mr-2 h-4 w-4' />
-                    Published Successfully
-                  </>
-                ) : (
-                  'Publish Video'
-                )}
+              <Button variant='outline' className='w-full' size='lg'>
+                <Check className='mr-2 h-4 w-4' />
+                All Changes Saved
               </Button>
             )}
 
@@ -356,13 +492,25 @@ export default function Publishing({ onComplete }: { onComplete: () => void }) {
                 </div>
                 <p className='text-sm text-green-600'>
                   Your video has been published to YouTube with {privacyStatus}{' '}
-                  privacy settings and is now available in your content library.
+                  privacy settings.
+                  {isSaved && ' All changes have been saved to the database.'}
                 </p>
-                <div className='mt-4'>
-                  <Button variant='outline' className='w-full'>
-                    View in Content Library
-                  </Button>
-                </div>
+
+                {isSaved && (
+                  <div className='mt-4'>
+                    <Button variant='outline' className='w-full'>
+                      View in Content Library
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Database Saved Message */}
+            {isSaved && (
+              <div className='mt-2 flex items-center justify-center text-sm text-green-600'>
+                <Database className='mr-1 h-4 w-4' />
+                All data saved to database
               </div>
             )}
           </CardContent>
