@@ -1,0 +1,76 @@
+classDiagram
+    class Env {
+        +AI ai
+    }
+
+    class Scene {
+        +number id
+        +string title
+        +string description
+        +string image
+        +string narration
+    }
+
+    class Character {
+        +number id
+        +string name
+        +string description
+    }
+
+    class Story {
+        +string prompt
+        +number scenesCount
+        +Scene[] scenes
+        +Character[] characters
+        +string theme
+    }
+
+    class StoryRequest {
+        +string prompt
+        +number sceneCount
+    }
+
+    class StoryResponse {
+        +Story story
+        +string[] images
+    }
+
+    class AIModel {
+        +string API_KEY
+        +string URL
+        +string requestBody
+    }
+
+    class LLMResponse {
+        <<interface>>
+    }
+
+    class GenerateContentRequest {
+        +string topic
+        +string type
+        +number sceneCount
+    }
+
+    class CloudflareWorker {
+        +fetch(Request, Env): Promise~Response~
+    }
+
+    %% New unified function class
+    class ContentGenerator {
+        <<utility>>
+        +Promise~string~ generateImage(ai, prompt, characters, imageType)
+        +Promise~string~ generateLLMResponse(model, prompt)
+        +Promise~Story~ generateStoryOutline(model, prompt, scenesCount)
+    }
+
+    %% Updated Relations
+    Story "1" -- "1...*" Scene : 
+    Story "1" -- "1...*" Character : 
+    StoryResponse "1" -- "1" Story : 
+    StoryResponse "1" -- "1...*" string : 
+    CloudflareWorker "1" -- "1" ContentGenerator
+    ContentGenerator "1" -- "1...*" Character
+    ContentGenerator "1" -- "1" AIModel
+    CloudflareWorker "1" -- "0...1" StoryRequest
+    CloudflareWorker "1" -- "0...1" GenerateContentRequest
+    CloudflareWorker "1" -- "0...1" StoryResponse

@@ -1,0 +1,90 @@
+classDiagram
+
+%% Web System
+
+class UserInterface {
+  +interact()
+  +sendRequest()
+  +displayContent()
+}
+
+class Auth {
+  +authenticateUser()
+  +registerUser()
+  +login()
+  +logout()
+}
+
+class User {
+  +getProfile()
+  +updateProfile()
+  +deleteUser()
+}
+
+
+class Gallery {
+  +getGallery()
+  +uploadImage()
+  +deleteImage()
+}
+
+class Generation {
+  +generateContent()
+  +storeGeneratedContent()
+}
+
+class Statistics {
+  +trackUserActivity()
+  +generateReport()
+}
+
+class Upload {
+  +uploadFile()
+  +validateFile()
+}
+
+class Video {
+  +processVideo()
+  +getVideoData()
+}
+
+class VideoProcessing {
+  +encodeVideo()
+  +transcodeVideo()
+}
+
+class UploadToYouTube {
+  +upload(video): Promise~string~
+}
+
+class ContentGenerator {
+  +generateImage()
+  +generateLLMResponse()
+  +generateStoryOutline()
+}
+
+class CloudflareWorker {
+  +fetch()
+}
+
+%% Relationships with multiplicity (only numbers)
+
+UserInterface --> Auth : 0..1
+UserInterface --> User : 0..1
+UserInterface --> Gallery : 0..1
+UserInterface --> Generation : 0..1
+UserInterface --> Statistics : 0..1
+UserInterface --> Upload : 0..1
+UserInterface --> Video : 0..1
+
+User --> Auth : 1
+Gallery --> Generation : 1
+Generation --> VideoProcessing : 0..1
+Generation --> ContentGenerator : 1
+
+Statistics --> User : 0..*
+Upload --> Generation : 1
+Video --> UploadToYouTube : 0..1
+
+CloudflareWorker --> Generation : 1
+CloudflareWorker --> ContentGenerator : 1
