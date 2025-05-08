@@ -1,32 +1,43 @@
 erDiagram
-    users ||--o{ gallery : "added_by"
-    users ||--o{ gen_history : "user_id"
-    gallery ||--o{ gen_history : "gallery_id"
-
     users {
         uuid id PK
-        string google_id UK
-        string email UK
-        string name
-        string avatar_url
+        text google_id UK
+        text email UK
+        text name
+        text avatar_url
         timestamp created_at
         timestamp updated_at
     }
-
+    
     gallery {
         uuid id PK
-        string video_url UK
-        string title
+        text video_url UK
+        text title
         uuid added_by FK
         timestamp created_at
         integer duration
-        string category
+        text category
     }
-
+    
     gen_history {
         uuid id PK
         uuid user_id FK
-        string prompt
+        text prompt
         uuid gallery_id FK
         timestamp created_at
     }
+    
+    youtube {
+        uuid id PK
+        uuid gen_history_id FK
+        text description
+        text youtube_url
+        text[] tags
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    users ||--o{ gallery : "adds"
+    users ||--o{ gen_history : "generates"
+    gallery ||--o{ gen_history : "referenced_in"
+    gen_history ||--o{ youtube : "linked_to"
