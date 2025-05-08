@@ -137,7 +137,7 @@ export function GenerationStats({ userId }: GenerationStatsProps) {
   }
 
   if (isLoading) {
-    return <div className='py-6 text-center'>Đang tải dữ liệu...</div>
+    return <div className='py-6 text-center'>Loading data...</div>
   }
 
   if (error) {
@@ -152,9 +152,9 @@ export function GenerationStats({ userId }: GenerationStatsProps) {
     <div className='grid gap-6 lg:grid-cols-2'>
       <Card className='col-span-2'>
         <CardHeader>
-          <CardTitle>Số Lượng Video Đã Tạo</CardTitle>
+          <CardTitle>Number of Videos Created</CardTitle>
           <CardDescription>
-            Theo dõi số lượng video bạn đã tạo theo thời gian
+            Track the number of videos you've created over time
           </CardDescription>
           <Tabs
             defaultValue='daily'
@@ -163,9 +163,9 @@ export function GenerationStats({ userId }: GenerationStatsProps) {
             className='w-full'
           >
             <TabsList className='grid w-full max-w-[300px] grid-cols-3'>
-              <TabsTrigger value='daily'>Hàng ngày</TabsTrigger>
-              <TabsTrigger value='weekly'>Hàng tuần</TabsTrigger>
-              <TabsTrigger value='monthly'>Hàng tháng</TabsTrigger>
+              <TabsTrigger value='daily'>Daily</TabsTrigger>
+              <TabsTrigger value='weekly'>Weekly</TabsTrigger>
+              <TabsTrigger value='monthly'>Monthly</TabsTrigger>
             </TabsList>
           </Tabs>
         </CardHeader>
@@ -179,12 +179,12 @@ export function GenerationStats({ userId }: GenerationStatsProps) {
               <XAxis dataKey={getDataKey()} tickFormatter={formatXAxis} />
               <YAxis allowDecimals={false} domain={[0, 'auto']} />
               <Tooltip
-                formatter={(value: number) => [value, 'Số video']}
+                formatter={(value: number) => [value, 'Videos']}
                 labelFormatter={value => {
                   if (timeRange === 'daily') {
                     try {
                       const date = new Date(value)
-                      return `Ngày ${date.getDate()}/${date.getMonth() + 1}`
+                      return `Date ${date.getDate()}/${date.getMonth() + 1}`
                     } catch {
                       return value
                     }
@@ -192,7 +192,7 @@ export function GenerationStats({ userId }: GenerationStatsProps) {
                   return value
                 }}
               />
-              <Bar dataKey='count' fill='#8884d8' name='Số video' />
+              <Bar dataKey='count' fill='#8884d8' name='Videos' />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
@@ -200,8 +200,10 @@ export function GenerationStats({ userId }: GenerationStatsProps) {
 
       <Card className='col-span-2'>
         <CardHeader>
-          <CardTitle>Thời Lượng Video</CardTitle>
-          <CardDescription>Tổng thời lượng video đã tạo (giây)</CardDescription>
+          <CardTitle>Video Duration</CardTitle>
+          <CardDescription>
+            Total duration of created videos (seconds)
+          </CardDescription>
           <Tabs
             defaultValue='daily'
             value={timeRange}
@@ -209,9 +211,9 @@ export function GenerationStats({ userId }: GenerationStatsProps) {
             className='w-full'
           >
             <TabsList className='grid w-full max-w-[300px] grid-cols-3'>
-              <TabsTrigger value='daily'>Hàng ngày</TabsTrigger>
-              <TabsTrigger value='weekly'>Hàng tuần</TabsTrigger>
-              <TabsTrigger value='monthly'>Hàng tháng</TabsTrigger>
+              <TabsTrigger value='daily'>Daily</TabsTrigger>
+              <TabsTrigger value='weekly'>Weekly</TabsTrigger>
+              <TabsTrigger value='monthly'>Monthly</TabsTrigger>
             </TabsList>
           </Tabs>
         </CardHeader>
@@ -227,13 +229,13 @@ export function GenerationStats({ userId }: GenerationStatsProps) {
               <Tooltip
                 formatter={(value: number) => [
                   formatDuration(value),
-                  'Thời lượng'
+                  'Duration'
                 ]}
                 labelFormatter={value => {
                   if (timeRange === 'daily') {
                     try {
                       const date = new Date(value)
-                      return `Ngày ${date.getDate()}/${date.getMonth() + 1}`
+                      return `Date ${date.getDate()}/${date.getMonth() + 1}`
                     } catch {
                       return value
                     }
@@ -245,7 +247,7 @@ export function GenerationStats({ userId }: GenerationStatsProps) {
                 type='monotone'
                 dataKey='duration'
                 stroke='#82ca9d'
-                name='Thời lượng (giây)'
+                name='Duration (seconds)'
                 strokeWidth={2}
               />
             </LineChart>

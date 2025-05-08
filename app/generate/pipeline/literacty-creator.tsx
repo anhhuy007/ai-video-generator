@@ -10,6 +10,8 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { SensitiveContentDialog } from '@/components/ui/error-dialog'
+
 import {
   Loader2,
   FileText,
@@ -165,6 +167,10 @@ export default function LiteraryCreator({
 
   const { setStory } = useGenerationStore()
 
+  // For displaying sensitive content error
+  const [showSensitiveContentModal, setShowSensitiveContentModal] = useState(false)
+
+
   // Update completion status when script is approved
   useEffect(() => {
     if (isScriptApproved) {
@@ -233,59 +239,64 @@ export default function LiteraryCreator({
 
   const handleGenerateScript = () => {
     if (!topic) return
-
+  
     setIsGenerating(true)
     setError('')
-
-    try {
-      fetch('http://127.0.0.1:8787/api/generate/content', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          topic,
-          type: contentStyle,
-          personalStyle: personalizedStyleInput,
-          sceneCount,
-          AI_type: selectedAIModel
-        })
+  
+    fetch('http://127.0.0.1:8787/api/generate/content', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        topic,
+        type: contentStyle,
+        personalStyle: personalizedStyleInput,
+        sceneCount,
+        AI_type: selectedAIModel,
+      }),
+    })
+      .then(async response => {
+        if (response.status === 400) {
+          setError('Nội dung bạn nhập chứa yếu tố nhạy cảm. Vui lòng nhập lại prompt.')
+          // alert('Sensitive content detected.') 
+          setShowSensitiveContentModal(true)
+          throw new Error('Sensitive content detected.')
+        }
+  
+        if (!response.ok) {
+          throw new Error(`Network response error: ${response.status}`)
+        }
+  
+        const data = await response.text()
+        return data
       })
-        .then(response => {
-          if (!response.ok) {
-            throw new Error(`Network response error: ${response.status}`)
-          }
-          return response.text()
-        })
-        .then(data => {
-          try {
-            const parsedData = JSON.parse(data)
-            const story = parsedData.story as Story
-            setStory(story)
-            const script = extractScript(story)
-            setGeneratedScript(script)
-            setActiveTab('preview')
-          } catch (err) {
-            console.error('Error extracting script:', err)
-            setError('Failed to process the generated script data')
-            handleFallbackScriptGeneration()
-          }
-        })
-        .catch(error => {
-          console.error('Error generating script:', error)
-          setError(`Failed to generate script: ${error.message}`)
+      .then(data => {
+        try {
+          const parsedData = JSON.parse(data)
+          const story = parsedData.story as Story
+          setStory(story)
+          const script = extractScript(story)
+          setGeneratedScript(script)
+          setActiveTab('preview')
+        } catch (err) {
+          console.error('Error extracting script:', err)
+          setError('Đã xảy ra lỗi khi xử lý nội dung kịch bản.')
           handleFallbackScriptGeneration()
-        })
-        .finally(() => {
-          setIsGenerating(false)
-        })
-    } catch (error) {
-      console.error('Exception during fetch:', error)
-      handleFallbackScriptGeneration()
-      setIsGenerating(false)
-    }
+        }
+      })
+      .catch(error => {
+        if (!error.message.includes('Sensitive content')) {
+          console.error('Error generating script:', error)
+          setError(`Không thể tạo kịch bản: ${error.message}`)
+          handleFallbackScriptGeneration()
+        }
+      })
+      .finally(() => {
+        setIsGenerating(false)
+      })
   }
-
+  
   const handleFallbackScriptGeneration = () => {
     console.log('Using fallback script generation')
 
@@ -1136,7 +1147,13 @@ export default function LiteraryCreator({
             </div>
           </div>
         </TabsContent>
+
       </Tabs>
+      <SensitiveContentDialog
+        open={showSensitiveContentModal}
+        onClose={() => setShowSensitiveContentModal(false)}
+      />
+
     </div>
   )
 }

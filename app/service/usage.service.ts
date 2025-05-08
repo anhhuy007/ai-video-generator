@@ -3,14 +3,14 @@
 import { sql } from '@/app/utils/database'
 import { cache } from 'react'
 
-// Hàm chuyển đổi giây sang phút
+// Function to convert seconds to minutes
 const secondsToMinutes = (seconds: number): number => seconds / 60
 
 export interface UsageStatistics {
   totalVideos: number
-  totalDuration: number // Đơn vị: giây
-  longestVideo: { title: string; duration: number } | null // Đơn vị: giây
-  avgDuration: number // Đơn vị: giây
+  totalDuration: number // Unit: seconds
+  longestVideo: { title: string; duration: number } | null // Unit: seconds
+  avgDuration: number // Unit: seconds
   productiveDay: string
   mostUsedCategory: string
   lastGeneration: string | null
@@ -26,8 +26,8 @@ export interface UsageStatistics {
     evening: number
     night: number
   }
-  planUsage: number // Phần trăm sử dụng gói
-  planLimit: string // Giới hạn (phút/tháng)
+  planUsage: number // Percentage of plan usage
+  planLimit: string // Limit (minutes/month)
   planExpiry: string
   planType: string
   countTrend: number
@@ -38,14 +38,14 @@ export interface UsageStatistics {
     duration: number
     category: string | null
     createdAt: string
-  }[] // Đơn vị: giây
+  }[] // Unit: seconds
   durationDistribution: { short: number; medium: number; long: number }
 }
 
 export interface VideoDetails {
   id: string
   title: string
-  duration: number // Đơn vị: giây
+  duration: number // Unit: seconds
   category: string | null
   createdAt: string
   prompt: string
@@ -121,10 +121,10 @@ const fetchAdditionalStats = async (userId: string, timeCondition: string) => {
       sql`SELECT EXTRACT(MONTH FROM gh.created_at) as month, COUNT(*) as count FROM gen_history gh JOIN users u ON gh.user_id = u.id WHERE u.google_id = ${userId} AND EXTRACT(YEAR FROM gh.created_at) = EXTRACT(YEAR FROM CURRENT_DATE) ${timeCondition ? sql`AND ${sql.unsafe(getTimeCondition(timeframe))}` : sql``} GROUP BY month ORDER BY month;`
     ])
 
-  // Sử dụng giá trị mặc định vì không có bảng user_subscriptions
+  // Using default value since there's no user_subscriptions table
   const defaultPlan = {
     plan_type: 'Free',
-    plan_limit: 100, // Giới hạn 100 phút/tháng
+    plan_limit: 100, // Limit of 100 minutes/month
     expiry_date: '2025-12-31 00:00:00'
   }
 
@@ -158,7 +158,7 @@ const fetchDistributionStats = async (
   const recentVideos = recentVideosResult.map(item => ({
     id: item.id,
     title: item.title,
-    duration: parseFloat(item.duration || '0'), // Đơn vị: giây
+    duration: parseFloat(item.duration || '0'), // Unit: seconds
     category: item.category,
     createdAt: item.created_at
   }))
@@ -200,22 +200,28 @@ export const getUserUsageStatistics = cache(
 
       const coreStats = await fetchCoreStats(userId, timeCondition)
       const totalVideos = parseInt(coreStats.total_videos || '0')
-      const totalDuration = parseFloat(coreStats.total_duration || '0') // Đơn vị: giây
-      const avgDuration = parseFloat(coreStats.avg_duration || '0') // Đơn vị: giây
+      const totalDuration = parseFloat(coreStats.total_duration || '0') // Unit: seconds
+      const avgDuration = parseFloat(coreStats.avg_duration || '0') // Unit: seconds
       const longestVideo = coreStats.max_duration
         ? {
             title: coreStats.longest_title || 'N/A',
             duration: parseFloat(coreStats.max_duration)
-          } // Đơn vị: giây
+          } // Unit: seconds
         : null
       const promptsUsed = parseInt(coreStats.prompts_used || '0')
 
       const timeStats = await fetchTimeBasedStats(userId)
       const productiveDay = timeStats?.productive_day?.trim() || 'N/A'
       const peakDay = timeStats?.peak_day
-        ? ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'][
-            parseInt(timeStats.peak_day)
-          ]
+        ? [
+            'Sunday',
+            'Monday',
+            'Tuesday',
+            'Wednesday',
+            'Thursday',
+            'Friday',
+            'Saturday'
+          ][parseInt(timeStats.peak_day)]
         : 'N/A'
       const peakTime = timeStats?.peak_hour
         ? `${timeStats.peak_hour}:00 - ${(parseInt(timeStats.peak_hour) + 1) % 24}:00`
@@ -234,14 +240,14 @@ export const getUserUsageStatistics = cache(
       const monthlyTrends = additionalStats.monthlyTrends
       const plan = additionalStats.plan
 
-      let planLimit = `${plan.plan_limit} phút/tháng` // Giới hạn ở phút
-      let planExpiry = '31/12/2025'
+      let planLimit = `${plan.plan_limit} minutes/month` // Limit in minutes
+      let planExpiry = '12/31/2025'
       let planType = plan.plan_type
-      const planLimitSeconds = plan.plan_limit * 60 // Chuyển đổi giới hạn từ phút sang giây
+      const planLimitSeconds = plan.plan_limit * 60 // Convert limit from minutes to seconds
       const planUsage = Math.min(
         Math.round((totalDuration / planLimitSeconds) * 100),
         100
-      ) // Tính phần trăm dựa trên giây
+      ) // Calculate percentage based on seconds
 
       const distributionStats = await fetchDistributionStats(
         userId,
@@ -265,9 +271,9 @@ export const getUserUsageStatistics = cache(
 
       return {
         totalVideos,
-        totalDuration, // Đơn vị: giây
-        longestVideo, // Đơn vị: giây
-        avgDuration, // Đơn vị: giây
+        totalDuration, // Unit: seconds
+        longestVideo, // Unit: seconds
+        avgDuration, // Unit: seconds
         productiveDay,
         mostUsedCategory,
         lastGeneration,
@@ -284,7 +290,7 @@ export const getUserUsageStatistics = cache(
         planType,
         countTrend,
         eveningUsagePercentage,
-        recentVideos, // Đơn vị: giây
+        recentVideos, // Unit: seconds
         durationDistribution
       }
     } catch (error) {
@@ -317,7 +323,7 @@ export async function getVideoDetails(
     return {
       id: videoResult[0].id,
       title: videoResult[0].title,
-      duration: parseFloat(videoResult[0].duration || '0'), // Đơn vị: giây
+      duration: parseFloat(videoResult[0].duration || '0'), // Unit: seconds
       category: videoResult[0].category,
       createdAt: videoResult[0].created_at,
       prompt: videoResult[0].prompt
@@ -431,13 +437,13 @@ export async function getUserRecommendations(userId: string) {
     return {
       productiveTimeRecommendation:
         productiveHour !== null
-          ? `Thử tạo video vào khoảng ${productiveHour}:00 - ${(productiveHour + 1) % 24}:00 để có hiệu quả tốt nhất.`
-          : 'Thử tạo video vào buổi sáng (8:00 - 11:00) để có hiệu quả tốt nhất.',
+          ? `Try creating videos around ${productiveHour}:00 - ${(productiveHour + 1) % 24}:00 for best results.`
+          : 'Try creating videos in the morning (8:00 - 11:00) for best results.',
       categoryRecommendation: successfulCategory
-        ? `Bạn có vẻ tạo ra được những video dài và chất lượng nhất ở thể loại "${successfulCategory}".`
-        : 'Thử tập trung vào một thể loại cụ thể để cải thiện chất lượng video.',
+        ? `You seem to create the longest and highest quality videos in the "${successfulCategory}" category.`
+        : 'Try focusing on a specific category to improve video quality.',
       generalRecommendation:
-        'Người dùng thường có hiệu suất cao hơn 15% khi sử dụng từ khóa chi tiết và cụ thể.'
+        'Users typically experience over 15% higher performance when using detailed and specific keywords.'
     }
   } catch (error) {
     console.error('Error generating recommendations:', {
@@ -446,11 +452,11 @@ export async function getUserRecommendations(userId: string) {
     })
     return {
       productiveTimeRecommendation:
-        'Thử tạo video vào buổi sáng (8:00 - 11:00) để có hiệu quả tốt nhất.',
+        'Try creating videos in the morning (8:00 - 11:00) for best results.',
       categoryRecommendation:
-        'Thử tập trung vào một thể loại cụ thể để cải thiện chất lượng video.',
+        'Try focusing on a specific category to improve video quality.',
       generalRecommendation:
-        'Người dùng thường có hiệu suất cao hơn 15% khi sử dụng từ khóa chi tiết và cụ thể.'
+        'Users typically experience over 15% higher performance when using detailed and specific keywords.'
     }
   }
 }

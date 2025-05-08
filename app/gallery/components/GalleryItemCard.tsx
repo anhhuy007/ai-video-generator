@@ -1,7 +1,7 @@
 // app/gallery/components/GalleryItemCard.tsx
 import Link from 'next/link'
 import { format } from 'date-fns'
-import { vi } from 'date-fns/locale'
+import { enUS } from 'date-fns/locale'
 
 type GalleryItemProps = {
   id: string
@@ -18,7 +18,7 @@ export default function GalleryItemCard({
 }: GalleryItemProps) {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
-    return format(date, 'dd/MM/yyyy', { locale: vi })
+    return format(date, 'MM/dd/yyyy', { locale: enUS })
   }
 
   return (
@@ -39,14 +39,14 @@ export default function GalleryItemCard({
             href={`/video/${id}`}
             className='rounded bg-white px-4 py-2 font-medium text-black transition-colors hover:bg-gray-100'
           >
-            Xem chi tiết
+            View details
           </Link>
         </div>
       </div>
       <div className='p-4'>
         <h3 className='truncate text-lg font-semibold'>{title}</h3>
         <p className='mt-1 text-sm text-gray-500'>
-          Đăng tải: {formatDate(createdAt)}
+          Uploaded: {formatDate(createdAt)}
         </p>
       </div>
     </div>
