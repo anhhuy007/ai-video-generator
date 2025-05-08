@@ -131,26 +131,26 @@ classDiagram
         +deleteYoutubeEntry(youtubeId)
     }
 
-    %% Relationships with Multiplicity
+    %% Relationships with Multiplicity (Entities)
     User "1" -- "0..*" GenHistory : creates
     User "1" -- "0..*" Gallery : uploads
     Gallery "1" -- "0..*" GenHistory : referenced by
     GenHistory "1" -- "0..1" YouTube : links to
-    
-    %% Service Dependencies
-    UserService --> User : manages
-    GalleryService --> Gallery : manages
-    GalleryService --> GenHistory : queries
-    GalleryService --> User : references
-    GenHistoryService --> GenHistory : manages
-    GenHistoryService --> User : references
-    GenHistoryService --> Gallery : references
-    StatisticsService --> User : analyzes
-    StatisticsService --> Gallery : analyzes
-    StatisticsService --> GenHistory : analyzes
-    UsageService --> User : analyzes
-    UsageService --> Gallery : analyzes
-    UsageService --> GenHistory : analyzes
-    YouTubeService --> Gallery : uploads videos for
-    YouTubeDBService --> YouTube : manages
-    YouTubeDBService --> GenHistory : references
+
+    %% Service Dependencies with Multiplicity
+    UserService "1" --> "1" User : manages
+    GalleryService "1" --> "0..*" Gallery : manages
+    GalleryService "1" --> "0..*" GenHistory : queries
+    GalleryService "1" --> "0..*" User : references
+    GenHistoryService "1" --> "0..*" GenHistory : manages
+    GenHistoryService "1" --> "0..*" User : references
+    GenHistoryService "1" --> "0..*" Gallery : references
+    StatisticsService "1" --> "0..*" User : analyzes
+    StatisticsService "1" --> "0..*" Gallery : analyzes
+    StatisticsService "1" --> "0..*" GenHistory : analyzes
+    UsageService "1" --> "0..*" User : analyzes
+    UsageService "1" --> "0..*" Gallery : analyzes
+    UsageService "1" --> "0..*" GenHistory : analyzes
+    YouTubeService "1" --> "0..*" Gallery : uploads videos for
+    YouTubeDBService "1" --> "0..*" YouTube : manages
+    YouTubeDBService "1" --> "0..*" GenHistory : references
