@@ -1,6 +1,4 @@
-
 classDiagram
-
     %% Entities
     class User {
         +UUID id
@@ -46,6 +44,21 @@ classDiagram
         +getGenHistoryForGalleryHome()
         +getGenHistoryById(historyId)
         +deleteGenHistory(historyId)
+    }
+
+    class YouTube {
+        +UUID id
+        +UUID gen_history_id
+        +TEXT description
+        +TEXT youtube_url
+        +TEXT[] tags
+        +TIMESTAMP created_at
+        +TIMESTAMP updated_at
+        +createYoutubeEntry(genHistoryId, description, youtubeUrl, tags)
+        +getYoutubeEntryById(youtubeId)
+        +getUserYoutubeEntries(userId)
+        +updateYoutubeEntry(youtubeId, description?, youtubeUrl?, tags?)
+        +deleteYoutubeEntry(youtubeId)
     }
 
     %% Services
@@ -109,23 +122,35 @@ classDiagram
         +getVideoStatus(videoId)
     }
 
-    %% Relationships
-    User "1" -- "0..*" GenHistory : user_id
-    User "1" -- "0..*" Gallery : added_by
-    Gallery "1" -- "0..*" GenHistory : gallery_id
+    class YouTubeDBService {
+        +Object db
+        +createYoutubeEntry(genHistoryId, description, youtubeUrl, tags)
+        +getYoutubeEntryById(youtubeId)
+        +getUserYoutubeEntries(userId)
+        +updateYoutubeEntry(youtubeId, description?, youtubeUrl?, tags?)
+        +deleteYoutubeEntry(youtubeId)
+    }
 
-    %% Service Interactions
+    %% Relationships with Multiplicity
+    User "1" -- "0..*" GenHistory : creates
+    User "1" -- "0..*" Gallery : uploads
+    Gallery "1" -- "0..*" GenHistory : referenced by
+    GenHistory "1" -- "0..1" YouTube : links to
+    
+    %% Service Dependencies
     UserService --> User : manages
     GalleryService --> Gallery : manages
     GalleryService --> GenHistory : queries
-    GalleryService --> User : queries
+    GalleryService --> User : references
     GenHistoryService --> GenHistory : manages
-    GenHistoryService --> User : queries
-    GenHistoryService --> Gallery : queries
-    StatisticsService --> User : queries
-    StatisticsService --> Gallery : queries
-    StatisticsService --> GenHistory : queries
-    UsageService --> User : queries
-    UsageService --> Gallery : queries
-    UsageService --> GenHistory : queries
+    GenHistoryService --> User : references
+    GenHistoryService --> Gallery : references
+    StatisticsService --> User : analyzes
+    StatisticsService --> Gallery : analyzes
+    StatisticsService --> GenHistory : analyzes
+    UsageService --> User : analyzes
+    UsageService --> Gallery : analyzes
+    UsageService --> GenHistory : analyzes
     YouTubeService --> Gallery : uploads videos for
+    YouTubeDBService --> YouTube : manages
+    YouTubeDBService --> GenHistory : references
