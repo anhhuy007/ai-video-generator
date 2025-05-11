@@ -52,16 +52,12 @@ export default function VideoDetailView({
 
       {/* Information Section - Right Side */}
       <div className='w-full md:w-1/3'>
-        <div className='rounded-lg bg-white p-6 shadow-md'>
-          <h3 className='mb-4 border-b pb-2 text-xl font-semibold'>
-            Thông tin chi tiết
-          </h3>
-
+        <div className='rounded-lg border-2 bg-white p-6 shadow-md'>
           <div className='space-y-4'>
             {/* Creator Information */}
             {creator && (
               <div>
-                <h4 className='text-sm font-medium text-gray-500'>Người tạo</h4>
+                <h4 className='text-sm font-medium text-gray-500'>Creator</h4>
                 <div className='mt-2 flex items-center'>
                   {creator.avatar_url ? (
                     <img
@@ -85,7 +81,7 @@ export default function VideoDetailView({
 
             {/* Video Information */}
             <div>
-              <h4 className='text-sm font-medium text-gray-500'>Tiêu đề</h4>
+              <h4 className='text-sm font-medium text-gray-500'>Title</h4>
               <p className='mt-1'>{galleryEntry.title}</p>
             </div>
 
@@ -101,9 +97,7 @@ export default function VideoDetailView({
 
             {/* Created Date */}
             <div>
-              <h4 className='text-sm font-medium text-gray-500'>
-                Thời gian tạo
-              </h4>
+              <h4 className='text-sm font-medium text-gray-500'>Created at</h4>
               <p className='mt-1'>{formatDate(galleryEntry.created_at)}</p>
             </div>
 

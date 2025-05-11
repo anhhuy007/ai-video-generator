@@ -62,7 +62,6 @@ export async function getGenHistoryForGalleryHome() {
   return result
 }
 
-
 export async function getGenHistoryById(historyId: string) {
   const result = await sql`
     SELECT * FROM gen_history

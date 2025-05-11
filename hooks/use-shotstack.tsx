@@ -7,6 +7,7 @@ import {
   SUBTITLE_POSITIONS,
   SUBTITLE_STYLES
 } from '@/app/generate/pipeline/video-editor'
+import { useGenerationStore } from '@/store/useGenerationStore'
 
 export default function useShotstackRender(
   mediaItems: MediaItem[],
@@ -22,6 +23,8 @@ export default function useShotstackRender(
   const [renderError, setRenderError] = useState<Error | null>(null)
   const [renderId, setRenderId] = useState<string | null>(null)
 
+  const { story } = useGenerationStore()
+
   const apiKey = isProduction
     ? process.env.NEXT_PUBLIC_SHOTSTACK_API_KEY_PRODUCTION
     : process.env.NEXT_PUBLIC_SHOTSTACK_API_KEY_SANDBOX
@@ -31,14 +34,18 @@ export default function useShotstackRender(
     : process.env.NEXT_PUBLIC_SHOTSTACK_API_URL_SANDBOX
 
   const pollInterval = 5000
-
   function normalizeAllCaptions(items: MediaItem[]): Caption[] {
     const allCaptions: Caption[] = []
     let globalStartTime = 0
-    const offsetPerScene = 0.7
+    const offsetPerWord = 0.4
 
     items.forEach((item, sceneIndex) => {
-      const sceneOffset = offsetPerScene * (sceneIndex + 1)
+      const title = story.scenes[sceneIndex].title
+
+      // Count the number of words in the title
+      const wordCount = title.trim().split(/\s+/).length
+      const sceneOffset = wordCount * offsetPerWord
+
       let currentTime = globalStartTime
 
       item.captions.forEach(caption => {

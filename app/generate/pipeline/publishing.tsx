@@ -135,16 +135,14 @@ export default function Publishing({ onComplete }: { onComplete: () => void }) {
 
       console.log('Gen history entry created:', genHistoryData)
 
-      // Step 3: Create youtube entry
       const youtubeResponse = await fetch('/api/youtube', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          genHistoryId: genHistoryData.id,
+          genHistoryId: genHistoryData.historyEntry.id,
           youtubeUrl: youtubeUrl,
-          title: title,
           description: description,
           tags: tags
         })

@@ -168,8 +168,8 @@ export default function LiteraryCreator({
   const { setStory } = useGenerationStore()
 
   // For displaying sensitive content error
-  const [showSensitiveContentModal, setShowSensitiveContentModal] = useState(false)
-
+  const [showSensitiveContentModal, setShowSensitiveContentModal] =
+    useState(false)
 
   // Update completion status when script is approved
   useEffect(() => {
@@ -239,35 +239,37 @@ export default function LiteraryCreator({
 
   const handleGenerateScript = () => {
     if (!topic) return
-  
+
     setIsGenerating(true)
     setError('')
-  
+
     fetch('http://127.0.0.1:8787/api/generate/content', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         topic,
         type: contentStyle,
         personalStyle: personalizedStyleInput,
         sceneCount,
-        AI_type: selectedAIModel,
-      }),
+        AI_type: selectedAIModel
+      })
     })
       .then(async response => {
         if (response.status === 400) {
-          setError('Nội dung bạn nhập chứa yếu tố nhạy cảm. Vui lòng nhập lại prompt.')
-          // alert('Sensitive content detected.') 
+          setError(
+            'Nội dung bạn nhập chứa yếu tố nhạy cảm. Vui lòng nhập lại prompt.'
+          )
+          // alert('Sensitive content detected.')
           setShowSensitiveContentModal(true)
           throw new Error('Sensitive content detected.')
         }
-  
+
         if (!response.ok) {
           throw new Error(`Network response error: ${response.status}`)
         }
-  
+
         const data = await response.text()
         return data
       })
@@ -296,7 +298,7 @@ export default function LiteraryCreator({
         setIsGenerating(false)
       })
   }
-  
+
   const handleFallbackScriptGeneration = () => {
     console.log('Using fallback script generation')
 
@@ -1147,13 +1149,11 @@ export default function LiteraryCreator({
             </div>
           </div>
         </TabsContent>
-
       </Tabs>
       <SensitiveContentDialog
         open={showSensitiveContentModal}
         onClose={() => setShowSensitiveContentModal(false)}
       />
-
     </div>
   )
 }

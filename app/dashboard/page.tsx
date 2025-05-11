@@ -9,10 +9,14 @@ import { VideoGallery } from '@/app/dashboard/tabs/gallery/gallery'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { UsageTabs } from '@/app/dashboard/tabs/usage/usage'
 import { signOut, useSession } from 'next-auth/react'
+import { useSearchParams } from 'next/navigation'
 
 export function DashboardPage() {
   const session = useSession()
-  const [activeTab, setActiveTab] = useState('generate')
+
+  const searchParams = useSearchParams()
+  const tabFromUrl = searchParams.get('tab') || 'generate'
+  const [activeTab, setActiveTab] = useState(tabFromUrl)
 
   return (
     <SidebarProvider defaultOpen={true}>

@@ -17,6 +17,7 @@ import { SidebarProvider } from '@/components/ui/sidebar'
 import { DashboardSidebar } from '../dashboard/components/sidebar'
 import { DashboardHeader } from '../dashboard/components/header'
 import { signOut, useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 
 export default function GeneratePage() {
   return (
@@ -36,6 +37,7 @@ function GenerateSteps() {
   const [imagesComplete, setImagesComplete] = useState(false)
   const [editorComplete, setEditorComplete] = useState(false)
   const [publishComplete, setPublishComplete] = useState(false)
+  const router = useRouter()
 
   const steps = [
     { id: 'literary', label: 'Literary Content' },
@@ -56,6 +58,9 @@ function GenerateSteps() {
     }
   }
 
+  const handleFinish = () => {
+    router.push('/?tab=gallery')
+  }
   const handlePrevious = () => {
     if (currentStepIndex > 0) {
       setActiveStep(steps[currentStepIndex - 1].id)
@@ -158,27 +163,7 @@ function GenerateSteps() {
                   <Publishing onComplete={() => setPublishComplete(true)} />
                 </TabsContent>
               </Tabs>
-              {/* 
-              <div className='mt-8 flex justify-between'>
-                <Button
-                  variant='outline'
-                  onClick={handlePrevious}
-                  disabled={currentStepIndex === 0}
-                >
-                  <ArrowLeft className='mr-2 h-4 w-4' /> Previous
-                </Button>
 
-                {activeStep !== 'publishr' ? (
-                  <Button
-                    onClick={handleNext}
-                    disabled={!isCurrentStepComplete()}
-                  >
-                    Next <ArrowRight className='ml-2 h-4 w-4' />
-                  </Button>
-                ) : (
-                  <Button disabled={!editorComplete}>Finish</Button>
-                )}
-              </div> */}
               <div className='mt-8 flex justify-between'>
                 <Button
                   variant='outline'
@@ -196,7 +181,9 @@ function GenerateSteps() {
                     Next <ArrowRight className='ml-2 h-4 w-4' />
                   </Button>
                 ) : (
-                  <Button disabled={!publishComplete}>Finish</Button>
+                  <Button disabled={!publishComplete} onClick={handleFinish}>
+                    Finish
+                  </Button>
                 )}
               </div>
             </Card>

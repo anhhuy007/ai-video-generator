@@ -170,6 +170,9 @@ export default function VoiceConfiguration({
 
         const audioBlob = response.data
         const uploadedUrl = await uploadAudioToCloudinary(audioBlob)
+
+        console.log('Uploaded URL:', uploadedUrl)
+
         uploadedUrls.push(uploadedUrl)
       }
 

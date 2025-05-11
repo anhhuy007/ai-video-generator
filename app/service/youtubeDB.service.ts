@@ -18,24 +18,24 @@ export async function createYoutubeEntry(
 ) {
   try {
     const result = await sql`
-      INSERT INTO youtube (
-        gen_history_id,
-        description,
-        youtube_url,
-        tags,
-        created_at,
-        updated_at
-      )
-      VALUES (
-        ${genHistoryId}::uuid,
-        ${description},
-        ${youtubeUrl},
-        ${tags},
-        NOW(),
-        NOW()
-      )
-      RETURNING id, gen_history_id, description, youtube_url, tags, created_at, updated_at
-    `
+  INSERT INTO youtube (
+    gen_history_id,
+    description,
+    youtube_url,
+    tags,
+    created_at,
+    updated_at
+  )
+  VALUES (
+    ${genHistoryId}::uuid,
+    ${description},
+    ${youtubeUrl},
+    ARRAY[${tags}]::text[],
+    NOW(),
+    NOW()
+  )
+  RETURNING id, gen_history_id, description, youtube_url, tags, created_at, updated_at
+`
 
     if (result && result.length > 0) {
       return result[0]

@@ -17,7 +17,8 @@ import {
   Pause,
   ChevronDown,
   ChevronUp,
-  Loader2
+  Loader2,
+  RefreshCw
 } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 
@@ -203,6 +204,24 @@ export default function VideoEditor({
     }
   })
 
+  // State to detect changes
+  const [effectsModifiedAfterGeneration, setEffectsModifiedAfterGeneration] =
+    useState(false)
+  const [previousTab, setPreviousTab] = useState<string | null>(null)
+
+  const [enableWatermark, setEnableWatermark] = useState(false)
+
+  useEffect(() => {
+    if (
+      previousTab === 'effects' &&
+      activeTab === 'preview' &&
+      previewVideoUrl
+    ) {
+      setEffectsModifiedAfterGeneration(true)
+    }
+    setPreviousTab(activeTab)
+  }, [activeTab, previousTab, previewVideoUrl])
+
   const downloadAndUploadVideo = async () => {
     try {
       if (!previewVideoUrl) return
@@ -229,63 +248,12 @@ export default function VideoEditor({
       }
 
       const uploadedVideoUrl = uploadData.url
+      console.log('upload url', uploadedVideoUrl)
       setVideoUrl(uploadedVideoUrl)
 
       if (!uploadedVideoUrl) {
         throw new Error('Failed to upload video to Cloudinary')
       }
-
-      // Step 2: Create a gallery entry
-      const videoDuration = await getAudioDuration(uploadedVideoUrl)
-      const durationInt = Math.round(videoDuration)
-
-      const galleryResponse = await fetch('/api/gallery', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          videoUrl: uploadedVideoUrl,
-          title: story.prompt,
-          category: null,
-          duration: durationInt
-        })
-      })
-
-      const galleryData = await galleryResponse.json()
-
-      if (!galleryResponse.ok || !galleryData.galleryEntry) {
-        throw new Error(
-          galleryData.error ||
-            `Failed to create gallery entry: ${galleryResponse.status} ${galleryResponse.statusText}`
-        )
-      }
-
-      console.log('Gallery entry created:', galleryData)
-      const galleryEntry = galleryData.galleryEntry
-
-      // Step 3: Create a gen history entry
-      const genHistoryResponse = await fetch('/api/gen_history', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          prompt: story.prompt,
-          galleryId: galleryData.galleryEntry.id
-        })
-      })
-
-      const genHistoryData = await genHistoryResponse.json()
-
-      if (!genHistoryResponse.ok || !genHistoryData) {
-        throw new Error(
-          genHistoryData.error ||
-            `Failed to create gen history entry: ${genHistoryResponse.status} ${genHistoryResponse.statusText}`
-        )
-      }
-
-      console.log('Gen history entry created:', genHistoryData)
     } catch (error: any) {
       console.error('Upload or API error:', error.message)
       throw new Error(error.message || 'An unexpected error occurred')
@@ -362,7 +330,7 @@ export default function VideoEditor({
   const { startRender, isRendering, renderData } = useShotstackRender(
     media_items,
     effect,
-    false,
+    !enableWatermark,
     autoSubtitles,
     backgroundMusic
   )
@@ -370,6 +338,7 @@ export default function VideoEditor({
   useEffect(() => {
     if (renderData == null) return
     setIsPreviewReady(true)
+    setEffectsModifiedAfterGeneration(false)
 
     if (renderData.error !== '') {
       setPreviewVideoError(renderData.error)
@@ -898,34 +867,47 @@ export default function VideoEditor({
                 </Card>
               </div>
             </div>
-            {/* 
+
             <div>
-              <Label className='mb-2 block'>Animations & Effects</Label>
-              <div className='grid grid-cols-2 gap-2 md:grid-cols-4'>
-                {[
-                  'Fade In/Out',
-                  'Text Animation',
-                  'Zoom Effect',
-                  'Color Grading',
-                  'Blur Background',
-                  'Picture-in-Picture',
-                  'Split Screen',
-                  'Slow Motion'
-                ].map((effect, index) => (
-                  <div
-                    key={index}
-                    className={`cursor-pointer rounded-md border p-2 text-center text-sm ${
-                      selectedEffects.includes(effect)
-                        ? 'border-primary bg-primary/10'
-                        : 'hover:bg-muted/50'
-                    }`}
-                    onClick={() => toggleEffect(effect)}
-                  >
-                    {effect}
+              <Label className='mb-2 block'>Watermark</Label>
+              <Card>
+                <CardContent className='p-4'>
+                  <div className='mb-4 flex items-center justify-between'>
+                    <div className='flex items-center space-x-2'>
+                      <svg
+                        xmlns='http://www.w3.org/2000/svg'
+                        width='16'
+                        height='16'
+                        viewBox='0 0 24 24'
+                        fill='none'
+                        stroke='currentColor'
+                        strokeWidth='2'
+                        strokeLinecap='round'
+                        strokeLinejoin='round'
+                        className='text-muted-foreground'
+                      >
+                        <rect
+                          width='18'
+                          height='18'
+                          x='3'
+                          y='3'
+                          rx='2'
+                          ry='2'
+                        ></rect>
+                        <path d='M9 8h6'></path>
+                        <path d='M9 12h6'></path>
+                        <path d='M9 16h6'></path>
+                      </svg>
+                      <span>Add watermark to video</span>
+                    </div>
+                    <Switch
+                      checked={enableWatermark}
+                      onCheckedChange={setEnableWatermark}
+                    />
                   </div>
-                ))}
-              </div>
-            </div> */}
+                </CardContent>
+              </Card>
+            </div>
 
             <div className='flex justify-between'>
               <Button
@@ -986,6 +968,37 @@ export default function VideoEditor({
               </div>
             </div>
 
+            {/* Effects Modified Warning */}
+            {previewVideoUrl && effectsModifiedAfterGeneration && (
+              <div className='rounded-md border border-amber-500 bg-amber-50 p-4'>
+                <div className='mb-2 flex items-center text-amber-700'>
+                  <RefreshCw className='mr-2 h-5 w-5' />
+                  <h3 className='font-medium'>Effects Modified</h3>
+                </div>
+                <p className='mb-4 text-sm text-amber-600'>
+                  You've made changes to effects since generating the video.
+                  Please regenerate the video to see your changes.
+                </p>
+                <Button
+                  onClick={startRender}
+                  disabled={isRendering}
+                  className='w-full'
+                >
+                  {isRendering ? (
+                    <>
+                      <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                      Regenerating Video...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className='mr-2 h-4 w-4' />
+                      Regenerate Video with New Effects
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+
             <div className='flex justify-between'>
               <Button variant='outline' onClick={() => setActiveTab('effects')}>
                 Back to Effects
@@ -993,7 +1006,10 @@ export default function VideoEditor({
               <Button
                 onClick={handleComplete}
                 disabled={
-                  !isPreviewReady || isUploading || isConfigurationComplete
+                  !isPreviewReady ||
+                  isUploading ||
+                  isConfigurationComplete ||
+                  isRendering
                 }
               >
                 {isUploading ? (
