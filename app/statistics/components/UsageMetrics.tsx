@@ -1,6 +1,6 @@
 'use client'
 // app/components/UsageMetrics.tsx
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import {
   Card,
@@ -599,9 +599,14 @@ export function UsageMetrics() {
     }
   }
 
+  const hasFetched = useRef(false)
+
   useEffect(() => {
-    if (session?.user?.id) fetchUsageStats()
-  }, [session])
+    if (session?.user?.id && !hasFetched.current) {
+      fetchUsageStats()
+      hasFetched.current = true
+    }
+  }, [session?.user?.id])
 
   if (isLoading) {
     return (

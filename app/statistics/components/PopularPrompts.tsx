@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import {
   BarChart,
@@ -60,28 +60,31 @@ export function PopularPrompts({ userId }: PopularPromptsProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    if (!userId) return
-
-    const fetchPrompts = async () => {
-      setIsLoading(true)
-      setError('')
-      try {
-        const response = await fetch(`/api/statistics/prompts?userId=${userId}`)
-        if (!response.ok) {
-          throw new Error('Failed to fetch prompts')
-        }
-        const data = await response.json()
-        setPrompts(data.prompts || [])
-        setCategories(data.categories || [])
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Error fetching data')
-      } finally {
-        setIsLoading(false)
+  const fetchPrompts = async () => {
+    setIsLoading(true)
+    setError('')
+    try {
+      const response = await fetch(`/api/statistics/prompts?userId=${userId}`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch prompts')
       }
+      const data = await response.json()
+      setPrompts(data.prompts || [])
+      setCategories(data.categories || [])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error fetching data')
+    } finally {
+      setIsLoading(false)
     }
+  }
+
+  const hasFetched = useRef(false)
+
+  useEffect(() => {
+    if (!userId || hasFetched.current) return
 
     fetchPrompts()
+    hasFetched.current = true
   }, [userId])
 
   const filteredPrompts = prompts

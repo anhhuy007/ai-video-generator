@@ -1,6 +1,6 @@
 // app/history/components/VideoList.tsx
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
@@ -32,65 +32,70 @@ export default function VideoList() {
   const [error, setError] = useState<string>('')
   const [userId, setUserId] = useState<string>('')
 
-  useEffect(() => {
-    const fetchHistories = async () => {
-      setLoading(true)
-      setError('')
-      try {
-        // Get user ID from session
-        if (session?.user?.id) {
-          setUserId(session.user.id)
-          console.log('User ID viewing history:', session.user.id)
-        }
+  const fetchHistories = async () => {
+    setLoading(true)
+    setError('')
 
-        const response = await fetch('/api/gen_history')
-
-        if (!response.ok) {
-          const data = await response.json()
-          throw new Error(data.error || 'Error loading history')
-        }
-
-        const data = await response.json()
-        setGenHistories(data.historyEntries || [])
-
-        const entriesWithGalleryId = (data.historyEntries || []).filter(
-          (history: GenHistory) => history.gallery_id
-        )
-
-        const galleryData: { [key: string]: GalleryEntry } = {}
-
-        await Promise.all(
-          entriesWithGalleryId.map(async (history: GenHistory) => {
-            if (!history.gallery_id) return
-
-            const galleryResponse = await fetch(
-              `/api/gallery/${history.gallery_id}`
-            )
-
-            if (galleryResponse.ok) {
-              const galleryEntryData = await galleryResponse.json()
-              if (galleryEntryData.genHistory) {
-                galleryData[history.gallery_id] = galleryEntryData.genHistory
-              }
-            }
-          })
-        )
-
-        setGalleryEntries(galleryData)
-      } catch (error) {
-        console.error('Error:', error)
-        setError(
-          error instanceof Error
-            ? error.message
-            : 'An error occurred while loading data'
-        )
-      } finally {
-        setLoading(false)
+    try {
+      // Get user ID from session
+      if (session?.user?.id) {
+        setUserId(session.user.id)
+        console.log('User ID viewing history:', session.user.id)
       }
-    }
 
-    fetchHistories()
-  }, [session])
+      const response = await fetch('/api/gen_history')
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Error loading history')
+      }
+
+      const data = await response.json()
+      setGenHistories(data.historyEntries || [])
+
+      const entriesWithGalleryId = (data.historyEntries || []).filter(
+        (history: GenHistory) => history.gallery_id
+      )
+
+      const galleryData: { [key: string]: GalleryEntry } = {}
+
+      await Promise.all(
+        entriesWithGalleryId.map(async (history: GenHistory) => {
+          if (!history.gallery_id) return
+
+          const galleryResponse = await fetch(
+            `/api/gallery/${history.gallery_id}`
+          )
+
+          if (galleryResponse.ok) {
+            const galleryEntryData = await galleryResponse.json()
+            if (galleryEntryData.genHistory) {
+              galleryData[history.gallery_id] = galleryEntryData.genHistory
+            }
+          }
+        })
+      )
+
+      setGalleryEntries(galleryData)
+    } catch (error) {
+      console.error('Error:', error)
+      setError(
+        error instanceof Error
+          ? error.message
+          : 'An error occurred while loading data'
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const hasFetched = useRef(false)
+  useEffect(() => {
+    if (session?.user?.id && !hasFetched.current) {
+      fetchHistories()
+      hasFetched.current = true
+    }
+  }, [session?.user?.id])
 
   const formatDate = (dateString: string) => {
     try {

@@ -23,13 +23,15 @@ export function DashboardPage() {
       <div className='flex h-screen w-full overflow-hidden bg-background'>
         <DashboardSidebar />
         <div className='flex flex-1 flex-col overflow-hidden'>
-          {/* <DashboardHeader
-            session={session.data}
-            onSignOut={() => {
-              console.log('Sign out clicked')
-              signOut()
-            }}
-          /> */}
+          {/* {session.data && (
+            <DashboardHeader
+              session={session.data}
+              onSignOut={() => {
+                console.log('Sign out clicked')
+                signOut()
+              }}
+            />
+          )} */}
           <main className='flex-1 overflow-auto p-4 md:p-6'>
             <Tabs
               value={activeTab}

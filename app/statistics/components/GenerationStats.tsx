@@ -1,6 +1,6 @@
 'use client'
 // app/statistics/components/GenerationStats.tsx
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Card,
   CardContent,
@@ -41,54 +41,57 @@ export function GenerationStats({ userId }: GenerationStatsProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    if (!userId) return
-
-    const fetchStats = async () => {
-      setIsLoading(true)
-      setError('')
-      try {
-        const response = await fetch(`/api/statistics?userId=${userId}`)
-        if (!response.ok) {
-          throw new Error('Failed to fetch statistics')
-        }
-        const data = await response.json()
-
-        // Ensure we have data for all days even if no videos were created
-        const today = new Date()
-        const dailyDataMap = new Map()
-
-        // Create entries for the past 14 days (increased from 7 to match the backend)
-        for (let i = 13; i >= 0; i--) {
-          const date = new Date(today)
-          date.setDate(date.getDate() - i)
-          const dateStr = date.toISOString().split('T')[0]
-          dailyDataMap.set(dateStr, { date: dateStr, count: 0, duration: 0 })
-        }
-
-        // Update with actual data
-        ;(data.daily || []).forEach((entry: StatsData) => {
-          if (dailyDataMap.has(entry.date)) {
-            dailyDataMap.set(entry.date, entry)
-          }
-        })
-
-        // Sort daily data by date
-        const sortedDailyData = Array.from(dailyDataMap.values()).sort(
-          (a, b) => new Date(a.date!).getTime() - new Date(b.date!).getTime()
-        )
-
-        setDailyData(sortedDailyData)
-        setWeeklyData(data.weekly || [])
-        setMonthlyData(data.monthly || [])
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Error fetching data')
-      } finally {
-        setIsLoading(false)
+  const fetchStats = async () => {
+    setIsLoading(true)
+    setError('')
+    try {
+      const response = await fetch(`/api/statistics?userId=${userId}`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch statistics')
       }
+      const data = await response.json()
+
+      // Ensure we have data for all days even if no videos were created
+      const today = new Date()
+      const dailyDataMap = new Map()
+
+      // Create entries for the past 14 days (increased from 7 to match the backend)
+      for (let i = 13; i >= 0; i--) {
+        const date = new Date(today)
+        date.setDate(date.getDate() - i)
+        const dateStr = date.toISOString().split('T')[0]
+        dailyDataMap.set(dateStr, { date: dateStr, count: 0, duration: 0 })
+      }
+
+      // Update with actual data
+      ;(data.daily || []).forEach((entry: StatsData) => {
+        if (dailyDataMap.has(entry.date)) {
+          dailyDataMap.set(entry.date, entry)
+        }
+      })
+
+      // Sort daily data by date
+      const sortedDailyData = Array.from(dailyDataMap.values()).sort(
+        (a, b) => new Date(a.date!).getTime() - new Date(b.date!).getTime()
+      )
+
+      setDailyData(sortedDailyData)
+      setWeeklyData(data.weekly || [])
+      setMonthlyData(data.monthly || [])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error fetching data')
+    } finally {
+      setIsLoading(false)
     }
+  }
+
+  const hasFetched = useRef(false)
+
+  useEffect(() => {
+    if (!userId || hasFetched.current) return
 
     fetchStats()
+    hasFetched.current = true
   }, [userId])
 
   const getChartData = () => {
