@@ -28,6 +28,7 @@ import { useGenerationStore } from '@/store/useGenerationStore'
 import { Slider } from '@/components/ui/slider'
 import mammoth from 'mammoth'
 import * as PDFJS from 'pdfjs-dist/legacy/build/pdf'
+import axios from 'axios'
 
 // This works with bundlers that support web workers properly
 PDFJS.GlobalWorkerOptions.workerSrc = new URL(
@@ -143,7 +144,7 @@ export default function LiteraryCreator({
 
   // Track overall completion
   // const [isComplete, setIsComplete] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError] = useState<String>('')
 
   // Scence count
   const [sceneCount, setSceneCount] = useState<number>(5)
@@ -165,7 +166,7 @@ export default function LiteraryCreator({
   // Copy state
   const [isCopied, setIsCopied] = useState(false)
 
-  const { setStory } = useGenerationStore()
+  const { setStory, story } = useGenerationStore()
 
   // For displaying sensitive content error
   const [showSensitiveContentModal, setShowSensitiveContentModal] =
@@ -227,76 +228,69 @@ export default function LiteraryCreator({
   }
 
   function extractScript(story: Story): string {
+    if (!story || !story.scenes) {
+      throw new Error('Story or story.scenes is undefined')
+    }
+
+    return story.scenes
+      .map((scene: Scene) => `# ${scene.title}\n${scene.narration}`)
+      .join('\n\n')
+  }
+
+  const generateScript = async () => {
     try {
-      return story.scenes
-        .map((scene: Scene) => `# ${scene.title}\n${scene.narration}`)
-        .join('\n\n')
-    } catch (error) {
-      console.error('Error processing scenes:', error)
-      return ''
+      const newTopic = {
+        topic: topic,
+        type: contentStyle,
+        personalizeStyle: personalizedStyleInput,
+        sceneCount: sceneCount,
+        AI_type: selectedAIModel
+      }
+
+      const result = await axios.post(
+        'http://127.0.0.1:8787/api/generate/content',
+        newTopic
+      )
+
+      return result.data
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+      throw err
     }
   }
 
-  const handleGenerateScript = () => {
+  const handleGenerateScript = async () => {
     if (!topic) return
 
     setIsGenerating(true)
     setError('')
 
-    fetch('http://127.0.0.1:8787/api/generate/content', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        topic,
-        type: contentStyle,
-        personalStyle: personalizedStyleInput,
-        sceneCount,
-        AI_type: selectedAIModel
-      })
-    })
-      .then(async response => {
-        if (response.status === 400) {
-          setError(
-            'Nội dung bạn nhập chứa yếu tố nhạy cảm. Vui lòng nhập lại prompt.'
-          )
-          // alert('Sensitive content detected.')
-          setShowSensitiveContentModal(true)
-          throw new Error('Sensitive content detected.')
-        }
+    try {
+      const data = await generateScript()
+      console.log('data script', data)
+      setStory(data.story)
+      const script = extractScript(data.story as Story)
+      setGeneratedScript(script)
+      setActiveTab('preview')
+    } catch (err: any) {
+      console.log('Error', err)
+      if (err.status == 400) {
+        setError(
+          'Your content is including sensitive content. Please try again with another topic'
+        )
+        setTopic('')
+        setShowSensitiveContentModal(true)
+        return
+      }
 
-        if (!response.ok) {
-          throw new Error(`Network response error: ${response.status}`)
-        }
-
-        const data = await response.text()
-        return data
-      })
-      .then(data => {
-        try {
-          const parsedData = JSON.parse(data)
-          const story = parsedData.story as Story
-          setStory(story)
-          const script = extractScript(story)
-          setGeneratedScript(script)
-          setActiveTab('preview')
-        } catch (err) {
-          console.error('Error extracting script:', err)
-          setError('Đã xảy ra lỗi khi xử lý nội dung kịch bản.')
-          handleFallbackScriptGeneration()
-        }
-      })
-      .catch(error => {
-        if (!error.message.includes('Sensitive content')) {
-          console.error('Error generating script:', error)
-          setError(`Không thể tạo kịch bản: ${error.message}`)
-          handleFallbackScriptGeneration()
-        }
-      })
-      .finally(() => {
-        setIsGenerating(false)
-      })
+      console.error('Error generating script:', err)
+      setError(
+        `Cannot generate content because: ${err.message || 'Unknown error'}`
+      )
+      handleFallbackScriptGeneration()
+    } finally {
+      setIsGenerating(false)
+    }
   }
 
   const handleFallbackScriptGeneration = () => {
@@ -315,10 +309,18 @@ export default function LiteraryCreator({
   const handleScriptEdit = (newScript: string) => {
     setGeneratedScript(newScript)
     setScriptEdited(true)
+    setIsScriptApproved(false)
   }
 
   const handleApproveScript = () => {
     setIsScriptApproved(true)
+    console.log(story)
+
+    const finalStory = story
+    story.prompt = generatedScript
+
+    console.log('Final story', finalStory)
+    setStory(finalStory)
   }
 
   // File upload handlers

@@ -20,19 +20,7 @@ import { Switch } from '@/components/ui/switch'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { useGenerationStore } from '@/store/useGenerationStore'
 import { YouTubeTokens } from '@/app/service/youtube.service'
-
-const getAudioDuration = (url: string): Promise<number> => {
-  return new Promise((resolve, reject) => {
-    const audio = new Audio()
-    audio.src = url
-    audio.addEventListener('loadedmetadata', () => {
-      resolve(audio.duration)
-    })
-    audio.addEventListener('error', err => {
-      reject(err)
-    })
-  })
-}
+import axios from 'axios'
 
 export default function Publishing({ onComplete }: { onComplete: () => void }) {
   const [title, setTitle] = useState(
@@ -79,89 +67,103 @@ export default function Publishing({ onComplete }: { onComplete: () => void }) {
     }
   }, [isPublished, isSaved, onComplete])
 
+  const getAudioDuration = (url: string): Promise<number> => {
+    return new Promise((resolve, reject) => {
+      const audio = new Audio()
+      audio.src = url
+      audio.addEventListener('loadedmetadata', () => {
+        resolve(audio.duration)
+      })
+      audio.addEventListener('error', err => {
+        reject(err)
+      })
+    })
+  }
+
+  const saveVideoUrl = async (
+    videoUrl: string,
+    title: string,
+    category: string
+  ) => {
+    const videoDuration = await getAudioDuration(videoUrl)
+    const durationInt = Math.round(videoDuration)
+
+    const response = await axios.post('/api/gallery', {
+      videoUrl,
+      title,
+      category,
+      duration: durationInt
+    })
+
+    if (!response || !response.data.galleryEntry) {
+      throw new Error('Cannot save video. Please try again later')
+    }
+
+    return response.data.galleryEntry
+  }
+
+  const saveVideoToHistory = async (prompt: string, galleryId: string) => {
+    const response = await axios.post('api/gen_history', {
+      prompt,
+      galleryId
+    })
+
+    if (!response || !response.data || !response.data) {
+      throw new Error('Cannot save video to history. Please try again later')
+    }
+
+    return response
+  }
+
+  const saveYoutubeUrl = async (
+    genHistoryId: string,
+    youtubeUrl: string,
+    description: string,
+    tags: string
+  ) => {
+    const response = await axios.post('/api/youtube ', {
+      genHistoryId,
+      youtubeUrl,
+      description,
+      tags
+    })
+
+    if (!response || !response.data) {
+      throw new Error('Cannot save youtube URL. Please try again later')
+    }
+
+    return response
+  }
+
   const handleSaveAll = async () => {
     try {
       setIsSaving(true)
 
       // Step 1: create a gallery entry
-      const videoDuration = await getAudioDuration(video_url)
-      const durationInt = Math.round(videoDuration)
-
-      const galleryResponse = await fetch('/api/gallery', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          videoUrl: video_url,
-          title: title,
-          category: null,
-          duration: durationInt
-        })
-      })
-
-      const galleryData = await galleryResponse.json()
-
-      if (!galleryResponse.ok || !galleryData.galleryEntry) {
-        throw new Error(
-          galleryData.error ||
-            `Failed to create gallery entry: ${galleryResponse.status} ${galleryResponse.statusText}`
-        )
-      }
-
-      console.log('Gallery entry created:', galleryData)
-      const galleryEntry = galleryData.galleryEntry
+      const galleryEntry = await saveVideoUrl(video_url, title, tags)
 
       // Step 2: Create a gen history entry
-      const genHistoryResponse = await fetch('/api/gen_history', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          prompt: story.prompt,
-          galleryId: galleryData.galleryEntry.id
-        })
-      })
+      const genHistoryData = await saveVideoToHistory(
+        story.prompt,
+        galleryEntry.id
+      )
 
-      const genHistoryData = await genHistoryResponse.json()
-
-      if (!genHistoryResponse.ok || !genHistoryData) {
-        throw new Error(
-          genHistoryData.error ||
-            `Failed to create gen history entry: ${genHistoryResponse.status} ${genHistoryResponse.statusText}`
-        )
+      // Step 3: Save youtube url
+      if (!youtubeUrl) {
+        throw new Error('Please upload video to youtube first.')
       }
 
-      console.log('Gen history entry created:', genHistoryData)
-
-      const youtubeResponse = await fetch('/api/youtube', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          genHistoryId: genHistoryData.historyEntry.id,
-          youtubeUrl: youtubeUrl,
-          description: description,
-          tags: tags
-        })
-      })
-
-      const youtubeData = await youtubeResponse.json()
-      if (!youtubeResponse.ok || !youtubeData) {
-        throw new Error(
-          youtubeData.error ||
-            `Failed to create YouTube entry: ${youtubeResponse.status} ${youtubeResponse.statusText}`
-        )
-      }
+      const youtubeData = await saveYoutubeUrl(
+        genHistoryData.data.historyEntry.id,
+        youtubeUrl,
+        description,
+        tags
+      )
 
       console.log('YouTube entry created:', youtubeData)
-
       setIsSaved(true)
     } catch (error: any) {
       console.error('Upload or API error:', error.message)
-      throw new Error(error.message || 'An unexpected error occurred')
     } finally {
       setIsSaving(false)
     }

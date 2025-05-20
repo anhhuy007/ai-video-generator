@@ -203,7 +203,6 @@ export default function VideoEditor({
       volume: 20
     }
   })
-
   // State to detect changes
   const [effectsModifiedAfterGeneration, setEffectsModifiedAfterGeneration] =
     useState(false)
@@ -222,42 +221,36 @@ export default function VideoEditor({
     setPreviousTab(activeTab)
   }, [activeTab, previousTab, previewVideoUrl])
 
-  const downloadAndUploadVideo = async () => {
+  const downloadVideo = async (url: string) => {
     try {
-      if (!previewVideoUrl) return
-
-      const videoResponse = await fetch(previewVideoUrl)
-      const videoBlob = await videoResponse.blob()
-
-      const file = new File([videoBlob], 'preview.mp4', { type: 'video/mp4' })
-      const formData = new FormData()
-      formData.append('file', file)
-
-      // Step 1: Upload video to Cloudinary
-      const uploadResponse = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData
+      const response = await axios.get(url, {
+        responseType: 'blob'
       })
 
-      const uploadData = await uploadResponse.json()
-
-      if (!uploadResponse.ok) {
-        throw new Error(
-          uploadData.error || 'Failed to upload video to Cloudinary'
-        )
+      if (!response || !response.data) {
+        throw new Error('Cannot download video. Please try again later')
       }
 
-      const uploadedVideoUrl = uploadData.url
-      console.log('upload url', uploadedVideoUrl)
-      setVideoUrl(uploadedVideoUrl)
-
-      if (!uploadedVideoUrl) {
-        throw new Error('Failed to upload video to Cloudinary')
-      }
+      return response.data as Blob
     } catch (error: any) {
-      console.error('Upload or API error:', error.message)
-      throw new Error(error.message || 'An unexpected error occurred')
+      console.error('Download failed:', error)
+      throw new Error('Network error. Cannot download video.')
     }
+  }
+
+  const uploadVideoToCloudinary = async (video: Blob) => {
+    const file = new File([video], 'preview.mp4', { type: 'video/mp4' })
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const response = await axios.post('/api/upload', formData)
+    if (!response || !response.data || !response.data.url) {
+      throw new Error(
+        'Cannot upload video to Cloudinary. Please try again later'
+      )
+    }
+
+    return response.data.url
   }
 
   // Update completion status when configuration is complete
@@ -413,7 +406,14 @@ export default function VideoEditor({
     setIsUploading(true)
 
     try {
-      await downloadAndUploadVideo()
+      if (!previewVideoUrl) {
+        throw new Error('You must create video url before uploading')
+      }
+
+      const video = await downloadVideo(previewVideoUrl)
+      const uploadedVideoUrl = await uploadVideoToCloudinary(video)
+
+      setVideoUrl(uploadedVideoUrl)
       setIsConfigurationComplete(true)
     } catch (error) {
       console.error('Error during video processing:', error)

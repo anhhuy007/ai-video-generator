@@ -35,7 +35,7 @@ export default function StatisticsPage() {
           <h1 className='mb-4 text-2xl font-bold'>Access Denied</h1>
           <p className='mb-4'>Please log in to view your statistics.</p>
           <button
-            onClick={() => (window.location.href = '/api/auth/google')}
+            onClick={() => (window.location.href = '/api/auth/signin')}
             className='rounded bg-primary px-4 py-2 text-white hover:bg-primary/90'
           >
             Log In

@@ -34,12 +34,7 @@ import {
 import { Slider } from '@/components/ui/slider'
 import axios from 'axios'
 import { useGenerationStore } from '@/store/useGenerationStore'
-import { Scene } from '@/app/utils/type'
-// import { Scene } from '@/app/utils/type'
-// interface ImageVideoGeneratorProps {
-//   scenes: Scene[]
-//   onComplete?: () => void
-// }
+import { Character, Scene } from '@/app/utils/type'
 
 const IMAGE_STYLES = [
   {
@@ -107,29 +102,6 @@ export default function ImageVideoGenerator({
 
   // Approve Images and push on Cloudinary
   const [imagesApproved, setImagesApproved] = useState(false)
-  const handleApproveImages = () => {
-    if (imageCreated && !isUploading) {
-      setIsUploading(true)
-
-      const uploadAllImages = async () => {
-        try {
-          const base64List = Object.values(screenImages)
-          const uploadedImageUrls = await uploadImagesToCloudinary(base64List)
-
-          console.log('Finish uploading')
-          setImages(uploadedImageUrls)
-          setImagesApproved(true)
-          setIsImageGenerateComplete(true)
-        } catch (error) {
-          console.error('Error uploading images:', error)
-        } finally {
-          setIsUploading(false)
-        }
-      }
-
-      uploadAllImages()
-    }
-  }
 
   // Update completion status when all screens have images and video is created
   useEffect(() => {
@@ -138,32 +110,47 @@ export default function ImageVideoGenerator({
     }
   }, [isImageGenerateComplete, onComplete])
 
-  useEffect(() => {
-    console.log('Generate compelet', isImageGenerateComplete)
-  }),
-    [isImageGenerateComplete]
+  // Handle improve images and push all images to cloudinary
+  const handleApproveImages = async () => {
+    if (imageCreated && !isUploading) {
+      setIsUploading(true)
 
-  const uploadImagesToCloudinary = async (
-    base64Images: string[]
-  ): Promise<string[]> => {
-    const uploadedUrls: string[] = []
-
-    for (const base64Image of base64Images) {
       try {
-        const response = await axios.post('/api/upload/image', {
-          base64Image: base64Image
-        })
-
-        console.log('Upload response:', response.data) //khong in ra
-        uploadedUrls.push(response.data.url)
+        const base64List = Object.values(screenImages)
+        const uploadedImageUrls = await uploadAllImagesToCloudinary(base64List)
+        setImages(uploadedImageUrls)
+        setImagesApproved(true)
+        setIsImageGenerateComplete(true)
       } catch (error) {
-        console.error('Upload failed for one image:', error)
-        uploadedUrls.push('')
+        console.error('Error uploading images:', error)
+      } finally {
+        setIsUploading(false)
       }
     }
-    console.log('Uploaded URLs:', uploadedUrls)
+  }
+  const uploadAllImagesToCloudinary = async (
+    base64Images: string[]
+  ): Promise<string[]> => {
+    const results = await Promise.all(
+      (base64Images || []).map(base64Image =>
+        uploadImageToCloudinary(base64Image)
+      )
+    )
+    return results
+  }
+  const uploadImageToCloudinary = async (
+    base64Image: string
+  ): Promise<string> => {
+    const response = await axios.post('/api/upload/image', {
+      base64Image
+    })
 
-    return uploadedUrls
+    if (!response.data.url) {
+      throw new Error(
+        'Cannot upload image to cloudinary. Please try again later'
+      )
+    }
+    return response.data.url
   }
 
   // Check if all screens have images
@@ -183,30 +170,48 @@ export default function ImageVideoGenerator({
     return `Generate a ${style} image of the scene: ${screen.image}`
   }
 
+  const generateAllImages = async (
+    scenes: Scene[],
+    characters: Character[],
+    imageType: string
+  ) => {
+    if (!scenes || !characters || !imageType) {
+      throw new Error('Lack of information. Please go back to previous step')
+    }
+
+    const response = await axios.post('/api/generation/images', {
+      scenes,
+      characters,
+      imageType
+    })
+
+    const scenesWithImages = response.data.scenes || []
+    const generatedImages = scenesWithImages.reduce(
+      (acc: any, screen: Scene) => {
+        acc[screen.id] = screen.image || null
+        return acc
+      },
+      {}
+    )
+
+    if (!generatedImages) {
+      throw new Error('No images returned from API')
+    }
+
+    return generatedImages
+  }
+
   const handleGenerateAllImages = async () => {
     console.log('Generating images for all screens...')
     setIsGenerating(true)
     setGenerationError(null)
 
     try {
-      const response = await axios.post('/api/generation/images', {
-        scenes: scriptScreens,
-        characters: story.characters,
-        imageType: imageStyle
-      })
-
-      const scenesWithImages = response.data.scenes || []
-      const generatedImages = scenesWithImages.reduce(
-        (acc: any, screen: Scene) => {
-          acc[screen.id] = screen.image || null
-          return acc
-        },
-        {}
+      const generatedImages = await generateAllImages(
+        scriptScreens,
+        story.characters,
+        imageStyle
       )
-
-      if (!generatedImages) {
-        throw new Error('No images returned from API')
-      }
 
       setScreenImages(prev => ({
         ...prev,
@@ -227,6 +232,25 @@ export default function ImageVideoGenerator({
     }
   }
 
+  const regenerateImage = async (
+    prompt: string,
+    characters: Character[],
+    imageType: string
+  ) => {
+    const response = await axios.post('api/generation/image', {
+      prompt,
+      characters,
+      imageType
+    })
+
+    const image = response.data.image
+    if (!image) {
+      throw new Error('NO image returned from API')
+    }
+
+    return image
+  }
+
   const handleRegenerateImage = async (screenId: number) => {
     setImageCreated(false)
     setIsRegenerating(screenId)
@@ -234,22 +258,17 @@ export default function ImageVideoGenerator({
 
     try {
       const screen = scriptScreens.find(s => s.id === screenId)
-      const characters = story.characters
-      console.log('Characters:', characters)
-      if (!characters) return
-      if (!screen) return
-
+      if (!screen) {
+        throw new Error('Screen is null, cannot generate prompt')
+      }
       const prompt = generateImagePrompt(screen, imageStyle)
-      const response = await axios.post('/api/generation/image', {
-        prompt,
-        characters: characters,
-        imageType: imageStyle
-      })
 
-      if (response.data.image) {
+      const image = await regenerateImage(prompt, story.characters, imageStyle)
+
+      if (image) {
         setScreenImages(prev => ({
           ...prev,
-          [screenId]: response.data.image
+          [screenId]: image
         }))
 
         setActiveTab('customize')
@@ -267,7 +286,6 @@ export default function ImageVideoGenerator({
 
   const handleEditImage = (screenId: number) => {
     setCurrentEditingScreen(screenId)
-    // Set the current script text for editing
     const screen = scriptScreens.find(s => s.id === screenId)
     if (screen) {
       setEditingScriptText(screen.image)
@@ -290,20 +308,15 @@ export default function ImageVideoGenerator({
 
     try {
       const screen = updatedScreens.find(s => s.id === currentEditingScreen)
-      const charaters = story.characters
       if (!screen) return
 
       const prompt = generateImagePrompt(screen, imageStyle)
-      const response = await axios.post('/api/generation/image', {
-        prompt,
-        characters: charaters,
-        imageType: imageStyle
-      })
+      const image = await regenerateImage(prompt, story.characters, imageStyle)
 
-      if (response.data.image) {
+      if (image) {
         setScreenImages(prev => ({
           ...prev,
-          [currentEditingScreen]: response.data.image
+          [currentEditingScreen]: image
         }))
       } else {
         throw new Error('No image returned from API')
@@ -622,7 +635,12 @@ export default function ImageVideoGenerator({
                 </div>
 
                 <div className='mt-4 flex justify-end'>
-                  <Button onClick={handleSaveEdit}>Save Changes</Button>
+                  <Button
+                    onClick={handleSaveEdit}
+                    disabled={isRegenerating == dialogScreen}
+                  >
+                    Save Changes
+                  </Button>
                 </div>
               </div>
             )}

@@ -22,6 +22,8 @@ import axios from 'axios'
 import { elevenlabs } from '@/lib/elevenlabs'
 import { Card, CardContent } from '@/components/ui/card'
 import { Slider } from '@/components/ui/slider'
+import { Scene } from '@/app/utils/type'
+import { M_PLUS_1 } from 'next/font/google'
 
 // Define options for speed, stability and style
 const SPEED_OPTIONS = [
@@ -63,6 +65,13 @@ interface Mp3Url {
   duration: number
 }
 
+interface Configuration {
+  voice: String
+  speed: number
+  stability: number
+  style: number
+}
+
 export default function VoiceConfiguration({
   onComplete
 }: {
@@ -70,6 +79,7 @@ export default function VoiceConfiguration({
 }) {
   const [voices, setVoices] = useState<Voice[]>([])
   const [selectedVoiceId, setSelectedVoiceId] = useState('')
+  const [error, setError] = useState<String>('')
   const [speed, setSpeed] = useState('1.0')
   const [stability, setStability] = useState('0.5')
   const [style, setStyle] = useState('0')
@@ -84,28 +94,34 @@ export default function VoiceConfiguration({
   )
   const audioRefs = useRef<{ [key: number]: HTMLAudioElement | null }>({})
 
-  // Fetch voices from ElevenLabs API
-  useEffect(() => {
-    const fetchVoices = async () => {
-      setIsLoading(true)
-      try {
-        const voiceRes = await elevenlabs.voices.getAll()
-        const fetchedVoices = voiceRes.voices as Voice[]
+  const fetchVoices = async (): Promise<Voice[]> => {
+    const voiceRes = await elevenlabs.voices.getAll()
+    return voiceRes.voices as Voice[]
+  }
 
-        setVoices(fetchedVoices)
-
-        // Set default voice if available
-        if (fetchedVoices.length > 0) {
-          setSelectedVoiceId(fetchedVoices[0].voice_id)
-        }
-      } catch (error) {
-        console.error('Error fetching voices:', error)
-      } finally {
-        setIsLoading(false)
+  const startFetchVoices = async () => {
+    setIsLoading(true)
+    try {
+      const voices = await fetchVoices()
+      setVoices(voices)
+      if (voices.length > 0) {
+        setSelectedVoiceId(voices[0].voice_id)
       }
+    } catch (err) {
+      console.error('Error:', err)
+      setError(err as String)
+    } finally {
+      setIsLoading(false)
     }
+  }
 
-    fetchVoices()
+  const hasFetched = useRef(false)
+
+  useEffect(() => {
+    if (!hasFetched.current) {
+      startFetchVoices()
+      hasFetched.current = true
+    }
   }, [])
 
   // Update completion status when configuration is complete
@@ -138,6 +154,38 @@ export default function VoiceConfiguration({
       throw error
     }
   }
+
+  const generateAudioFile = async (scene: Scene, config: Configuration) => {
+    const script = `# ${scene.title}\n${scene.narration}`
+
+    const response = await axios.post(
+      '/api/generation/voice',
+      {
+        ...config,
+        text: script
+      },
+      {
+        responseType: 'blob'
+      }
+    )
+
+    return response.data
+  }
+
+  const processScene = async (config: Configuration, scene: Scene) => {
+    const audioBlob = await generateAudioFile(scene, config)
+    const uploadedUrl = await uploadAudioToCloudinary(audioBlob)
+    const duration = await getAudioDuration(uploadedUrl)
+
+    return {
+      id: scene.id,
+      title: scene.title,
+      content: scene.narration,
+      audioUrl: uploadedUrl,
+      duration: duration
+    } as Mp3Url
+  }
+
   const handleComplete = async () => {
     if (!selectedVoiceId || !story) {
       console.error('No story or voice selected.')
@@ -147,59 +195,24 @@ export default function VoiceConfiguration({
     setIsUploading(true)
 
     try {
-      const uploadedUrls: string[] = []
+      const config = {
+        voice: getSelectedVoiceName(),
+        speed: Number.parseFloat(speed),
+        stability: Number.parseFloat(stability),
+        style: Number.parseFloat(style)
+      } as Configuration
 
-      for (const scene of story.scenes || []) {
-        const script = `# ${scene.title}\n${scene.narration}`
+      const results = await Promise.all(
+        (story.scenes || []).map(scene => processScene(config, scene))
+      )
 
-        const configuration = {
-          text: script,
-          voice: getSelectedVoiceName(),
-          speed: Number.parseFloat(speed),
-          stability: Number.parseFloat(stability),
-          style: Number.parseFloat(style)
-        }
-
-        const response = await axios.post(
-          '/api/generation/voice',
-          configuration,
-          {
-            responseType: 'blob'
-          }
-        )
-
-        const audioBlob = response.data
-        const uploadedUrl = await uploadAudioToCloudinary(audioBlob)
-
-        console.log('Uploaded URL:', uploadedUrl)
-
-        uploadedUrls.push(uploadedUrl)
-      }
+      console.log(results)
 
       if (setMp3Url) {
-        setMp3Url(uploadedUrls)
+        setMp3Url(results.map(file => file.audioUrl))
       }
 
-      const newGeneratedFiles: Mp3Url[] = []
-
-      for (let i = 0; i < uploadedUrls.length; i++) {
-        const url = uploadedUrls[i]
-        const scene = story.scenes[i]
-
-        const duration = await getAudioDuration(url)
-
-        const mp3File: Mp3Url = {
-          id: scene.id,
-          title: scene.title,
-          content: scene.narration,
-          audioUrl: url,
-          duration: duration
-        }
-
-        newGeneratedFiles.push(mp3File)
-      }
-
-      setGeneratedAudioFiles(newGeneratedFiles)
+      setGeneratedAudioFiles(results)
       setIsConfigurationComplete(true)
     } catch (error) {
       console.error('Error generating scene audios:', error)

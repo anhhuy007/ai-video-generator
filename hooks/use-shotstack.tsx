@@ -34,7 +34,7 @@ export default function useShotstackRender(
     : process.env.NEXT_PUBLIC_SHOTSTACK_API_URL_SANDBOX
 
   const pollInterval = 5000
-  function normalizeAllCaptions(items: MediaItem[]): Caption[] {
+  const normalizeAllCaptions = (items: MediaItem[]): Caption[] => {
     const allCaptions: Caption[] = []
     let globalStartTime = 0
     const offsetPerWord = 0.4
@@ -66,7 +66,7 @@ export default function useShotstackRender(
     return allCaptions
   }
 
-  function createSRTContent(captions: Caption[]): string {
+  const createSRTContent = (captions: Caption[]): string => {
     let srtContent = ''
 
     captions.forEach((caption, index) => {
@@ -90,7 +90,9 @@ export default function useShotstackRender(
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')},${milliseconds.toString().padStart(3, '0')}`
   }
 
-  async function uploadSRTFileWithAxios(items: MediaItem[]): Promise<string> {
+  const uploadSRTFileWithAxios = async (
+    items: MediaItem[]
+  ): Promise<string> => {
     const normalizedCaptions = normalizeAllCaptions(items)
     const srtContent = createSRTContent(normalizedCaptions)
 
@@ -100,18 +102,15 @@ export default function useShotstackRender(
     const formData = new FormData()
     formData.append('file', file)
 
-    console.log('Uploading SRT file:', formData)
-    for (let [key, value] of formData.entries()) {
-      console.log(key, value)
-    }
-
-    console.log('SRT content:', srtContent)
-
     const response = await axios.post('/api/upload/srt', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
     })
+
+    if (!response || !response.data || !response.data.url) {
+      throw new Error('Cannot upload file cap')
+    }
 
     return response.data.url
   }
@@ -262,7 +261,6 @@ export default function useShotstackRender(
       setRenderStatus('submitting')
       setRenderProgress(0)
       const requestBody = await createTimeline(mediaItems, effect)
-      console.log('Request body:', requestBody)
       const response = await axios.post(`${apiUrl}/render`, requestBody, {
         headers: {
           'Content-Type': 'application/json',
