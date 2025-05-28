@@ -5,7 +5,7 @@ This project leverages advanced AI technologies to create engaging video
 content, offering users a seamless experience to generate, customize, and review
 video scripts with robust content moderation features.
 
-![Homepage](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/img/step-1/homepage.png)
+![Homepage](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/images/step-1/homepage.png)
 
 <!-- Replace with actual image URL if available -->
 
@@ -22,169 +22,209 @@ video scripts with robust content moderation features.
   </p>
 </div>
 
-## Features
+# AI Video Generator Features
 
-- **Video Content Creation (Step 1)** The video creation process begins with a
-  comprehensive content generation step, designed to provide users with flexible
-  and customizable options for crafting video scripts. This step includes the
-  following functionalities:
+## 🎬 The 5 Main Steps to Create Your Video
 
-1. Content Generation:
+### 📝 **STEP 1: Video Content Creation**
 
-- Input Topic: Users can enter a specific topic for the video.
-- Select Content Style: Choose from various content styles (e.g., narrative,
-  educational, promotional).
-- Personalize Writing Style: Customize the tone of the script (e.g., formal,
-  casual, creative).
-- Target Audience: Select the intended audience (e.g., students, children,
-  elderly) to tailor the content appropriately.
-- Number of Scenes: Specify the number of scenes to be generated for the video.
-- AI Model Selection: Choose between advanced AI models (Gemini or Meta AI) for
-  content generation.
-- File Upload Option: Alternatively, users can upload Word or PDF files to
-  generate video content directly from existing documents.
-  ![Content Generation](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/img/step-1/content-genrator.png)
-  ![File Upload Option](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/img/step-1/file.png)
+### 🎤 **STEP 2: Voice Generation**
 
-2. Sensitive Content Check (Highlighted Feature):
+### 🖼️ **STEP 3: Image Generation**
 
-- A mandatory step that scans and flags sensitive or inappropriate content
-  before proceeding to further steps.
-- Utilizes advanced AI algorithms to detect potentially harmful material, such
-  as content that could be used for misinformation, defamation, deepfake
-  generation, or activities that threaten national security or social order.
-- This feature ensures compliance with ethical standards, protecting user
-  integrity and fostering a responsible platform for creative expression.
-- In the context of rapidly evolving AI technologies, particularly generative
-  models, this step addresses critical concerns about misuse, making it an
-  indispensable part of the content creation process.
+### ✂️ **STEP 4: Video Editing**
 
-3. Script Editing:
+### 🚀 **STEP 5: Video Publishing**
 
-- Users can manually edit the generated script to align with their creative
-  vision.
-  ![Script editing](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/img/step-1/edit-script.png)
+---
 
-4. Script Approval:
+## Detailed Features
 
-- Final review and approval of the script before moving to subsequent video
-  generation steps.
-  ![Script preview and approval](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/img/step-1/script-preview.png)
+### 📝 **STEP 1: Video Content Creation**
 
-- **Voice Generation (Step 2)** After approving the script, users proceed to the
-  voice generation step, where they can customize the audio narration for each
-  scene. This step includes the following functionalities:
+The video creation process begins with a comprehensive content generation step,
+designed to provide users with flexible and customizable options for crafting
+video scripts.
 
-1. Select Speaker Voice: Choose from a variety of AI-generated voices (e.g.,
-   male, female, different accents) to match the video’s tone and audience.
-2. Adjust Reading Speed: Fine-tune the speed of the narration to suit the pacing
-   of the video (e.g., slow for educational content, fast for promotional
-   videos).
-3. Select Stability: Adjust the consistency and clarity of the voice output to
-   ensure high-quality audio with minimal artifacts or distortions.
-4. hoose Speaking Style: Customize the speaking style (e.g., conversational,
-   authoritative, enthusiastic) to align with the video’s content and target
-   audience.
-5. Audio Preview: After generating the audio, users can listen to the narration
-   for each scene directly within the app. Previews are displayed below each
-   scene, allowing easy review and adjustments before proceeding to the next
-   step.
-   ![Voice Generation](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/img/step-2/voice.png)
+#### **1.1 Content Generation**
 
-- **Image Generation (Step 3)** Once the audio narration is finalized, users
-  move to the image generation step to create visuals for each scene in the
-  video. This step includes the following functionalities:
+• **Input Topic**: Users can enter a specific topic for the video  
+• **Select Content Style**: Choose from various content styles (narrative,
+educational, promotional)  
+• **Personalize Writing Style**: Customize the tone of the script (formal,
+casual, creative)  
+• **Target Audience**: Select the intended audience (students, children,
+elderly) to tailor content appropriately  
+• **Number of Scenes**: Specify the number of scenes to be generated for the
+video  
+• **AI Model Selection**: Choose between advanced AI models (Gemini or Meta AI)
+for content generation  
+• **File Upload Option**: Upload Word or PDF files to generate video content
+directly from existing documents
 
-1. Select Visual Style:
+![Content Generation](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/images/step-1/content-genrator.png)
+![File Upload Option](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/images/step-1/file.png)
 
-- Users are presented with six distinct visual styles for the entire video:
-  Sketch, Classic, Modern, Abstract, Realistic, and Cartoon.
-- The chosen style is applied uniformly across all scenes to ensure visual
-  consistency.
+#### **1.2 Sensitive Content Check** ⚠️ **(Highlighted Feature)**
 
-      ![Select Visual Style](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/img/step-3/choose-style.png)
+• **Mandatory Scanning**: Scans and flags sensitive or inappropriate content
+before proceeding  
+• **AI Detection**: Utilizes advanced AI algorithms to detect potentially
+harmful material  
+• **Content Protection**: Detects misinformation, defamation, deepfake
+generation, or threats to national security  
+• **Ethical Compliance**: Ensures compliance with ethical standards and protects
+user integrity  
+• **Responsible Platform**: Fosters a responsible platform for creative
+expression in the AI era
 
-2. Image Generation:
+#### **1.3 Script Editing**
 
-- After selecting a style, the app generates images for each scene based on the
-  approved script and chosen visual style.
+• **Manual Editing**: Users can manually edit the generated script to align with
+their creative vision
 
-3. Image Review and Editing:
+![Script editing](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/images/step-1/edit-script.png)
 
-- Generated images are displayed for user review.
-- Users can regenerate or edit images by modifying the prompt for each scene,
-  allowing for fine-tuned customization to match their creative vision.
+#### **1.4 Script Approval**
 
-  ![Preview](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/img/step-3/preview.png)
+• **Final Review**: Final review and approval of the script before moving to
+subsequent video generation steps
 
-![Edit Image](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/img/step-3/edit.png)
+![Script preview and approval](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/images/step-1/script-preview.png)
 
-4. Image Approval:
+---
 
-- Users review and approve the final set of images before proceeding to the next
-  step in the video creation process.
+### 🎤 **STEP 2: Voice Generation**
 
-- **Video Editing (Step 4)** After approving the images, users proceed to the
-  video editing step to refine and polish the video. This step allows users to
-  arrange scenes, add effects, and customize audio elements. The functionalities
-  include:
+After approving the script, users proceed to the voice generation step, where
+they can customize the audio narration for each scene.
 
-1. Timeline Editing:
+#### **2.1 Voice Customization Options**
 
-- Users can drag and drop to adjust the timeline of the entire video,
-  rearranging scenes in their desired order for optimal storytelling flow.
+• **Select Speaker Voice**: Choose from a variety of AI-generated voices (male,
+female, different accents) to match the video's tone and audience  
+• **Adjust Reading Speed**: Fine-tune the speed of narration to suit video
+pacing (slow for educational, fast for promotional)  
+• **Select Stability**: Adjust consistency and clarity of voice output to ensure
+high-quality audio with minimal artifacts  
+• **Choose Speaking Style**: Customize speaking style (conversational,
+authoritative, enthusiastic) to align with content and target audience
 
-  ![Timeline Editing](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/img/step-4/edit-timeline.png)
+#### **2.2 Audio Preview**
 
-2. Effects and Audio Customization:
+• **Real-time Preview**: Listen to the narration for each scene directly within
+the app  
+• **Scene-by-scene Review**: Previews displayed below each scene for easy review
+and adjustments
 
-- Scene Transitions: Adjust in/out effects for each scene (e.g., fade, slide,
-  dissolve) to enhance visual flow.
-- Subtitle Customization: Automatically generate subtitles with options to
-  adjust their position, font style, and size.
-- Background Music: Choose from a library of pre-selected background music
-  tracks, categorized by mood (e.g., upbeat, calm, dramatic), and adjust the
-  volume to balance with the narration.
-- Watermark Option: Users can choose whether to include a watermark on the video
-  for branding or copyright purposes.
+![Voice Generation](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/images/step-2/voice.png)
 
-  ![Effects and Audio Customization](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/img/step-4/edit-effects.png)
+---
 
-3. Video Preview:
+### 🖼️ **STEP 3: Image Generation**
 
-- After applying edits, the app generates a preview of the video for user
-  review.
-- Users can return to previous editing steps if the preview is unsatisfactory or
-  approve the video to proceed to the next step.
+Once the audio narration is finalized, users move to the image generation step
+to create visuals for each scene in the video.
 
-  ![Preview](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/img/step-4/preview.png)
+#### **3.1 Visual Style Selection**
 
-- **Video Publishing (Step 5)** The final step allows users to publish their
-  completed video directly to their YouTube channel. This step includes the
-  following functionalities:
+• **Six Distinct Styles**: Choose from Sketch, Classic, Modern, Abstract,
+Realistic, and Cartoon  
+• **Uniform Application**: The chosen style is applied uniformly across all
+scenes to ensure visual consistency
 
-1. YouTube Authentication:
+![Select Visual Style](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/images/step-3/choose-style.png)
 
-- Users log in to their YouTube account via OAuth to securely connect the app to
-  their channel.
+#### **3.2 Image Generation Process**
 
-2. Video Metadata Customization:
+• **Automated Generation**: App generates images for each scene based on the
+approved script and chosen visual style
 
-- Title: Users can input a title for the video.
-- Description: Users can add a detailed description to provide context or
-  promote the video.
-- Tags: Users can add relevant tags to improve discoverability on YouTube.
+#### **3.3 Image Review and Editing**
 
-3. Privacy Settings:
+• **Visual Review**: Generated images are displayed for user review  
+• **Custom Regeneration**: Users can regenerate or edit images by modifying the
+prompt for each scene  
+• **Fine-tuned Customization**: Allows for precise customization to match
+creative vision
 
-- Users can choose the visibility of the video: Public, Private, or Unlisted.
+![Preview](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/images/step-3/preview.png)
+![Edit Image](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/images/step-3/edit.png)
 
-4. Publish to YouTube:
+#### **3.4 Image Approval**
 
-- After configuring the metadata and privacy settings, users can easily publish
-  the video to their YouTube channel directly from the app.
+• **Final Review**: Users review and approve the final set of images before
+proceeding to the next step
 
-  ![Video Publishing ](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/img/step-5/publish.png)
+---
+
+### ✂️ **STEP 4: Video Editing**
+
+After approving the images, users proceed to the video editing step to refine
+and polish the video. This step allows users to arrange scenes, add effects, and
+customize audio elements.
+
+#### **4.1 Timeline Editing**
+
+• **Drag and Drop Interface**: Adjust the timeline of the entire video by
+rearranging scenes  
+• **Optimal Flow**: Arrange scenes in desired order for optimal storytelling
+flow
+
+![Timeline Editing](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/images/step-4/edit-timeline.png)
+
+#### **4.2 Effects and Audio Customization**
+
+• **Scene Transitions**: Adjust in/out effects for each scene (fade, slide,
+dissolve) to enhance visual flow  
+• **Subtitle Customization**: Automatically generate subtitles with adjustable
+position, font style, and size  
+• **Background Music**: Choose from a library of pre-selected tracks categorized
+by mood (upbeat, calm, dramatic)  
+• **Volume Control**: Adjust music volume to balance with narration  
+• **Watermark Option**: Choose whether to include a watermark for branding or
+copyright purposes
+
+![Effects and Audio Customization](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/images/step-4/edit-effects.png)
+
+#### **4.3 Video Preview**
+
+• **Real-time Preview**: App generates a preview of the video for user review  
+• **Iterative Editing**: Users can return to previous editing steps if preview
+is unsatisfactory  
+• **Final Approval**: Approve the video to proceed to the publishing step
+
+![Preview](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/images/step-4/preview.png)
+
+---
+
+### 🚀 **STEP 5: Video Publishing**
+
+The final step allows users to publish their completed video directly to their
+YouTube channel.
+
+#### **5.1 YouTube Authentication**
+
+• **Secure Login**: Users log in to their YouTube account via OAuth to securely
+connect the app to their channel
+
+#### **5.2 Video Metadata Customization**
+
+• **Title**: Users can input a custom title for the video  
+• **Description**: Add detailed descriptions to provide context or promote the
+video  
+• **Tags**: Add relevant tags to improve discoverability on YouTube
+
+#### **5.3 Privacy Settings**
+
+• **Visibility Control**: Choose video visibility: Public, Private, or Unlisted
+
+#### **5.4 Direct Publishing**
+
+• **One-click Publishing**: After configuring metadata and privacy settings,
+easily publish the video to YouTube directly from the app
+
+![Video Publishing](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/images/step-5/publish.png)
 
 - **Search and Discovery**
 
