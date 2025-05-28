@@ -5,7 +5,7 @@ This project leverages advanced AI technologies to create engaging video
 content, offering users a seamless experience to generate, customize, and review
 video scripts with robust content moderation features.
 
-![Homepage](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/images/step-1/homepage.png)
+![Homepage](https://github.com/nlanhduy/ai-video-generator/blob/main/public/images/step-1/homepage.png)
 
 <!-- Replace with actual image URL if available -->
 
@@ -62,8 +62,8 @@ for content generation
 • **File Upload Option**: Upload Word or PDF files to generate video content
 directly from existing documents
 
-![Content Generation](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/images/step-1/content-genrator.png)
-![File Upload Option](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/images/step-1/file.png)
+![Content Generation](https://github.com/nlanhduy/ai-video-generator/blob/main/public/images/step-1/content-genrator.png)
+![File Upload Option](https://github.com/nlanhduy/ai-video-generator/blob/main/public/images/step-1/file.png)
 
 #### **1.2 Sensitive Content Check** ⚠️ **(Highlighted Feature)**
 
@@ -83,14 +83,14 @@ expression in the AI era
 • **Manual Editing**: Users can manually edit the generated script to align with
 their creative vision
 
-![Script editing](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/images/step-1/edit-script.png)
+![Script editing](https://github.com/nlanhduy/ai-video-generator/blob/main/public/images/step-1/edit-script.png)
 
 #### **1.4 Script Approval**
 
 • **Final Review**: Final review and approval of the script before moving to
 subsequent video generation steps
 
-![Script preview and approval](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/images/step-1/script-preview.png)
+![Script preview and approval](https://github.com/nlanhduy/ai-video-generator/blob/main/public/images/step-1/script-preview.png)
 
 ---
 
@@ -117,7 +117,7 @@ the app
 • **Scene-by-scene Review**: Previews displayed below each scene for easy review
 and adjustments
 
-![Voice Generation](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/images/step-2/voice.png)
+![Voice Generation](https://github.com/nlanhduy/ai-video-generator/blob/main/public/images/step-2/voice.png)
 
 ---
 
@@ -133,7 +133,7 @@ Realistic, and Cartoon
 • **Uniform Application**: The chosen style is applied uniformly across all
 scenes to ensure visual consistency
 
-![Select Visual Style](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/images/step-3/choose-style.png)
+![Select Visual Style](https://github.com/nlanhduy/ai-video-generator/blob/main/public/images/step-3/choose-style.png)
 
 #### **3.2 Image Generation Process**
 
@@ -148,8 +148,8 @@ prompt for each scene
 • **Fine-tuned Customization**: Allows for precise customization to match
 creative vision
 
-![Preview](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/images/step-3/preview.png)
-![Edit Image](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/images/step-3/edit.png)
+![Preview](https://github.com/nlanhduy/ai-video-generator/blob/main/public/images/step-3/preview.png)
+![Edit Image](https://github.com/nlanhduy/ai-video-generator/blob/main/public/images/step-3/edit.png)
 
 #### **3.4 Image Approval**
 
@@ -171,7 +171,7 @@ rearranging scenes
 • **Optimal Flow**: Arrange scenes in desired order for optimal storytelling
 flow
 
-![Timeline Editing](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/images/step-4/edit-timeline.png)
+![Timeline Editing](https://github.com/nlanhduy/ai-video-generator/blob/main/public/images/step-4/edit-timeline.png)
 
 #### **4.2 Effects and Audio Customization**
 
@@ -185,7 +185,7 @@ by mood (upbeat, calm, dramatic)
 • **Watermark Option**: Choose whether to include a watermark for branding or
 copyright purposes
 
-![Effects and Audio Customization](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/images/step-4/edit-effects.png)
+![Effects and Audio Customization](https://github.com/nlanhduy/ai-video-generator/blob/main/public/images/step-4/edit-effects.png)
 
 #### **4.3 Video Preview**
 
@@ -194,7 +194,7 @@ copyright purposes
 is unsatisfactory  
 • **Final Approval**: Approve the video to proceed to the publishing step
 
-![Preview](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/images/step-4/preview.png)
+![Preview](https://github.com/nlanhduy/ai-video-generator/blob/main/public/images/step-4/preview.png)
 
 ---
 
@@ -224,7 +224,7 @@ video
 • **One-click Publishing**: After configuring metadata and privacy settings,
 easily publish the video to YouTube directly from the app
 
-![Video Publishing](https://github.com/nlanhduy/ai-video-generator/blob/3352ddf5ca0d203377418fb1b7efc4a77cea4f65/public/images/step-5/publish.png)
+![Video Publishing](https://github.com/nlanhduy/ai-video-generator/blob/main/public/images/step-5/publish.png)
 
 - **Search and Discovery**
 
