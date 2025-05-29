@@ -1,9 +1,10 @@
 # AI Video Generator
 
-A comprehensive AI-powered video generation mobile app developed on Android.
-This project leverages advanced AI technologies to create engaging video
-content, offering users a seamless experience to generate, customize, and review
-video scripts with robust content moderation features.
+A comprehensive AI-powered video generation web application. This project
+leverages advanced AI technologies to create engaging video content, offering
+users a seamless experience to generate, customize, and review video scripts
+with robust content moderation features—all accessible directly from the
+browser.
 
 ![Homepage](https://github.com/nlanhduy/ai-video-generator/blob/main/public/images/step-1/homepage.png)
 
